@@ -1,0 +1,85 @@
+.info-text {
+	text-align: center;
+	margin: 5px !important;
+}
+.red {
+	color: red;
+}
+
+.sync-progress {
+	
+}
+/*
+.enyo-progress-bar-inner {
+	margin: 0 -5px;
+	height: 12px;
+	border-width: 0 5px;
+	position: absolute;
+	z-index:10; /* for progressSlider altBarPosition */
+	-webkit-border-image: url(images/progress-bar-inner.png) 0 5 0 5 repeat repeat;
+} 
+*/
+.enyo-progress-bar {
+	/* background: -webkit-gradient(linear, left top, right top, from(#f00), to(#0f0)); */
+}
+/* Base styles */
+.truncating-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Sync Log Toaster */
+.sync-log {
+	position: absolute;
+	top: 10em;
+	background-color: rgba(0,0,0,0.5);
+	color: #ffffff;
+	font-size: 0.8em;
+	padding: 1em;
+	text-align: center;
+	-webkit-border-radius: 0.5em;
+	width: 25em;
+	
+}
+
+/* Notes List */
+.notelist-width {
+	width: 300px;
+}
+.notelist-date {
+	margin-right: .6em;
+}
+.notes-count {
+	color: #eee;
+	font-size: 15px;
+	background-color: #999;
+	-webkit-border-radius: 1em;
+	padding: 1px 6px;
+	min-width: 2em;
+	text-align: center;
+	/* border: 1px solid #ddd; */
+}
+
+/* Error */
+.enyo-text-error {
+	
+	margin: 5px !important;
+}
+.warning-icon {
+	background: url(images/warning.png) 0 0 no-repeat;
+}
+
+.enyo-text-error.warning-icon{
+	padding-left: 2em;
+}
+
+/* Help */
+.help-base {
+	background-color: #ffffff;
+	padding: 20px 50px 20px 50px;
+}
+
+.h1 {
+	color: red;
+}

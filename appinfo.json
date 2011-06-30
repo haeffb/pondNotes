@@ -1,0 +1,30 @@
+{
+	"id": "com.smallpondapps.app.pondnotes",
+	"version": "0.1.0",
+	"vendor": "smallPondapps",
+	"type": "web",
+	"main": "index.html",
+	"title": "pondNotes",
+	"icon": "notepad64.png",
+	"smallicon": "notepad32.png",
+	"splashicon": "notepad256.png",
+	"uiRevision": 2,
+	"copyright": "&copy; Copyright 2011 smallPondapps",
+	"noWindow": true,
+	"support":
+	{
+		"url": "http://smallpondapps.com",
+		"email":
+		{
+			"address": "bigfish@smallpondapps.com",
+			"subject": "pondNotes Support"   
+		}
+	},
+	"universalSearch" : {
+		"action" :  { 
+			"displayName" : "New note in pondNotes",
+			"url"         : "com.smallpondapps.app.pondnotes",
+			"launchParam" : {"action" :"addnote", "note" : "#{searchTerms}"}
+		}
+	}
+}

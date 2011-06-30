@@ -1,0 +1,21 @@
+{ "returnValue":true,
+  "isInternetConnectionAvailable":true,
+   "wifi":{
+     "state":"connected",
+     "ipAddress":"10.0.2.15",
+     "interfaceName":"eth0",
+     "ssid":"Emulator",
+     "bssid":"Emulator",
+     "networkConfidenceLevel":"excellent",
+     "onInternet":"yes"
+  },
+  "wan":{
+    "state":"disconnected"
+  },
+  "vpn":{
+    "state":"disconnected"
+  },
+  "bridge":{
+    "state":"disconnected"
+  }
+}
