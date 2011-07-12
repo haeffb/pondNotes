@@ -3,6 +3,7 @@ enyo.depends(
 	"source/pondNotes.js",
 	"source/helpfile.js",
 	"source/preferences.js",
+	"source/noteInfo.js",
 	"../source/SupportInfo.js",
 	"../models/utils.js",
 	"../models/base64.js",
@@ -10,5 +11,7 @@ enyo.depends(
 	"../models/dataHD.js",
 	"../models/sync2apiHD.js",
 	"../models/debug.js",
-	"pondNotes.css"
+	"../models/showdown.js",
+	"pondNotes.css",
+	"override.css"
 );

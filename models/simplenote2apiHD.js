@@ -141,7 +141,7 @@ enyo.kind({
 		this.$.trylogin.call(postdata);	
 	},
 	loginSuccess: function (inSender, inResponse, inRequest) {
-		//this.log("Login Success!", inSender, inResponse, inRequest);
+		this.log("Login Success!", inSender, inResponse, inRequest);
 		//debugObject(inRequest.xhr, "noFuncs");
 		// FIXME: don't send unencoded email & pass to server!!!!
 		//this.setCredentials(inSender.email, inSender.pass);
@@ -334,6 +334,6 @@ enyo.kind({
 		this.$[inSender.name].destroy();
 	},
 	onFailure: function (inSender, inResponse, inRequest) {
-		this.log("API: failure response = ", inSender, inResponse, inRequest)
+		//this.log("API: failure response = ", inSender, inResponse, inRequest)
 	}
 });

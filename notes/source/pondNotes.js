@@ -11,7 +11,7 @@ enyo.kind({
 	published: {
 		launchParams: null,
 		selectedNote: null,
-		selectedRowIndex: null
+		selectedRowIndex: 0
 	},
 	components: [			
 		// Simplenote API kind from simplenoteAPIHD.js	
@@ -32,7 +32,7 @@ enyo.kind({
 
 		{name: "header", kind: "PageHeader", components: [
 			{name: "backButton", kind: "Button", caption: $L("Back"), onclick: "closeHelp", showing: false},
-			{kind: "Image", src: "images/pondnoteslogo64.png", style: "margin: -15px 0px -15px 0px; padding: -20px;" },
+			{kind: "Image", src: "images/1pondnoteslogo64.png", style: "margin: -15px 0px -15px 0px; padding: -20px;" },
 			{kind: "Spacer"},
 			{kind: "ActivityButton", name: "accountButton", caption: '', style: "font-size: 15px;", onclick: "accountClicked",
 				components: [
@@ -52,10 +52,11 @@ enyo.kind({
 		{name: "mainPane", kind: "Pane", flex: 1, components: [
 			{name: "mySlidingPane", kind: "SlidingPane", flex: 1, components: [
 				{name: "listPane", kind: "SlidingView", width: "320px", components: [
-					{name: "tags", kind: "Header", components: [
-						{content: '<img src="images/15-tags.png"/>', style: "padding-right: 5px;"},
+					{name: "tags", kind: "Toolbar", className: "enyo-toolbar-light", components: [
+						{kind: "Image", src: "images/15-tags.png", style: "padding: 0 10px;"},
 						{name: "tagSelector", kind: "ListSelector", 
-							onChange: "tagChanged", value: "All Notes", items: []},
+							style: "min-width: 100px;",
+							onChange: "tagChanged", value: "All Notes", items: [{caption: "test", value: 1}]},
 				//		{kind: "Spacer"},
 				//		{kind: "Image", src: "images/icon-sort.png", onclick: "showSortMenu"},
 						{kind: "Spacer"},
@@ -71,6 +72,7 @@ enyo.kind({
 									components: [
 										{layoutKind: "VFlexLayout", className: "notelist-width", components: [
 	 										{layoutKind: "HFlexLayout", components: [
+												{name: "pinIcon", kind: "Image", src: "images/icon-pin.png", showing: false, style: "padding-right: 5px;"}, 
 												{name: "notetitle", className: "truncating-text notetitle-width", flex: 1},
 												//style: "font-weight: bold;", flex: 1},
 												{name: "notedate", className: "enyo-item-ternary notelist-date"}
@@ -85,53 +87,67 @@ enyo.kind({
 						{kind: "Spacer"},
 						{name: "searchField", kind: "ToolSearchInput", 
 							onkeypress: "logKeys", oninput: "searchNotes", onCancel: "searchCancel" },
-						//{kind: "Spacer"},
-						//{icon: "images/menu-icon-add.png", onclick: "addNoteButtonClicked"},
-						//{icon: "images/icon-sync-light.png", name: "syncButton", onclick: "syncNow"}
 					]}
 	
 				]},
 				{name: "notePane", kind: "SlidingView", flex: 1, dismissible: false,
 					dragAnywhere: false,
 					components: [
-					{kind: "Input", name: 'tagEdit', alwaysLooksFocused: true,
-						oninput: "saveNote", keypressInputDelay: 1000, 
-						hint: $L("Tag this note..."),
-						components: [
-							{kind: "Image", src: "images/15-tags.png", onclick: "showTagsMenu", style: "padding-right: 5px;"},
-	/*
-								{name: "tagEdit", kind: "BasicInput",
-									oninput: "saveNote", keypressInputDelay: 1000, 
-									//alwaysLooksFocused: true,
-									flex: 1, hint: $L("Tag this note...")}
-	
-	*/					]
-					}, 
-					{kind: "Scroller", flex: 1, slidingHandler: false, components: [
-						{name: "noteEdit", flex: 1, kind: "RichText",  value: "",
-							oninput: "saveNote", keypressInputDelay: 1000, richContent: true,
-							alwaysLooksFocused: true, //height: "100%",
-							allowHtml: true,
-							 hint: $L("Enter note here...")
-						},
-					]},
-					{kind: "Toolbar", slidingHandler: false, components: [
-						{kind: "GrabButton"},
-						{kind: "Spacer"},
-						//{icon: "images/menu-icon-month.png", onmousehold: "addStampMenu", onclick: "addStamp", value: "date"},
-						{icon: "images/11-clock.png", onmousehold: "addStampMenu", onclick: "addStamp", value: "both"},
-						{kind: "Spacer"}, 
-						{kind: "HtmlContent", name: "modifiedLabel", //width: "250px",
-							content: "", 
-							style: "color: #bbbbbb; font-size: 15px;",
-							//className: "enyo-item-secondary"
-						},
-						{kind: "Spacer"},
-						{icon: "images/18-envelope.png", onclick: "sendNote", value: "email"},
-						//{icon: "images/menu-icon-newchat.png", onclick: "sendNote", value: "sms"},
-						{kind: "Spacer"}, 
-						{icon: "images/icon_trash.png", onclick: "deleteClicked"}
-					]}
+						{kind: "Toolbar", align: "center", className: "enyo-toolbar-light", components: [
+							{kind: "ToolInput", flex: 1, align: "center", name: 'tagEdit', alwaysLooksFocused: true,
+								oninput: "saveNote", keypressInputDelay: 1000, autoCapitalize: "lowercase",
+								hint: $L("Tag this note..."),
+								style: "width: 100%;",
+								components: [
+									{kind: "CustomButton", className: "tag-input", onclick: "showTagsMenu", style: "margin: 2px;"},
+								]
+							}, 
+							{kind: "Spacer"},
+							{name: "noteViewEditRadio", kind: "RadioGroup", value: "noteViewScroller",
+								onChange: "toggleViewEdit", components: [
+								{label: $L("Edit"), value: "noteEditScroller"},
+								{label: $L("View"), value: "noteViewScroller"}
+							]}
+						]},
+						{kind: "Pane", flex: 1, flex: 1, name: "noteViewPane", components: [
+								
+							{name: "noteEditScroller", kind: "Scroller", flex: 1, classname: "note-view", 
+									slidingHandler: false, autoHorizontal: false, horizontal: false, autoVertical: true, vertical: true,
+									components: [
+									{name: "noteEdit", kind: "RichText",  value: "",
+										//nodeTag: "pre",
+										oninput: "saveNote", onblur: "noteEditBlur", 
+										//className: "enyo-input",
+										keypressInputDelay: 1000, richContent: true,
+										alwaysLooksFocused: true, //height: "100%",
+										allowHtml: true, //autoLinking: true,
+										 hint: $L("Enter note here...")
+									},
+								]},
+									
+							{name: "noteViewScroller", kind: "Scroller", flex: 1, classname: "note-view", 
+									slidingHandler: false, autoHorizontal: false, horizontal: false, autoVertical: true, vertical: true,
+									components: [
+									{name: "noteView", flex: 1, kind: "HtmlContent", allowHtml: true,
+										className: "note-view",
+										onLinkClick: "noteViewLinkClick",
+									}
+								]},
+						]},
+						{kind: "Toolbar", slidingHandler: false, components: [
+							{kind: "GrabButton"},
+							{kind: "Spacer"},
+							{kind: "HtmlContent", name: "modifiedLabel", //width: "250px",
+								content: "", 
+								style: "color: #bbbbbb; font-size: 15px;",
+							},
+							{kind: "Image", src: "images/1smallpondlogo.png", height: "30px;"},
+							{kind: "Spacer"},
+							{icon: "images/icon-stamp.png", onmousehold: "addStampMenu", onclick: "addStamp", value: "both"},
+							{icon: "images/icon-mail.png", onclick: "sendNote", value: "email"},
+							{icon: "images/icon-info3.png", onclick: "openNoteInfo"},
+							{icon: "images/toolbar-icon-multi-delete.png", onclick: "deleteClicked"}
+						]}
 						
 				]}
 			]},
@@ -163,8 +179,9 @@ enyo.kind({
 					className: "enyo-item-ternary info-text"},
 				{kind: "RowGroup", components: [
 					{name: "emailInput", kind: "Input", inputType: "email", 
+						autoCapitalize: "lowercase", 
 					hint: "enter email address...", onchange: "inputChange", oninput: "emailChange",
-					autoCapitalize: "lowercase", onkeypress: "logKeys"},
+					conkeypress: "logKeys"},
 				]},
 				{kind: "RowGroup", components: [
 					{name: "passInput", kind: "PasswordInput", hint: "enter password...", 
@@ -181,6 +198,11 @@ enyo.kind({
 		    	{kind: "ActivityButton", name: "loginButton", caption: $L("Login"), flex: 1, onclick: "accountLogin", className: "enyo-button-dark"},
 			]},
 		]},
+		
+		// Note Info Dialog
+		{name: "noteInfo", kind: "pondNotes.noteInfo", 
+			onNoteInfoSave: "saveNoteInfo", onNoteInfoCancel: "cancelNoteInfo",
+			onBeforeOpen: "noteInfoBeforeOpen"},
 		
 		// Settings Dialog
 		{kind: "ModalDialog", name: "settings", caption: $L("Preferences"), onBeforeOpen: "settingsBeforeOpen",
@@ -234,7 +256,65 @@ enyo.kind({
 				break;
 		}
 	},
+	noteViewLinkClick: function (inSender, inEvent) {
+		this.log(inSender, inEvent);
+		var r = new enyo.PalmService();
+		  r.service = "palm://com.palm.applicationManager/";
+		  r.method = "open";
+		  r.call({target: inEvent});		
+	},
 	
+	toggleViewEdit: function (inSender, inEvent) {
+		this.log (inSender.value);
+		this.log("Edit", this.$.noteEdit.getShowing());
+		//this.$.noteEdit.setShowing(!this.$.noteEdit.getShowing());
+		//this.$.noteView.setShowing(!this.$.noteView.getShowing());
+		this.$.noteViewPane.selectViewByName(inSender.value);
+		this.displayNote(this.selectedNote);
+	},
+	
+	noteInfoBeforeOpen: function (inSender, inEvent) {
+		//this.$.noteInfo.markdownCheckbox.setChecked(enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
+		//this.$.noteInfo.pinnedCheckbox.setChecked(enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
+		var markdown = (enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
+		var pinned = (enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
+		this.$.noteInfo.setChecked(this, {markdown: markdown, pinned: pinned});
+		this.log();
+	},
+	openNoteInfo: function (inSender, inEvent) {
+		this.$.noteInfo.openAtCenter();
+		this.$.noteInfo.setMarkdown(enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
+		this.$.noteInfo.setPinned(enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
+	},
+	saveNoteInfo: function (inSender, inEvent) {
+		this.log(inEvent);
+		this.log(this.selectedNote.systemtags);
+		var markdownIndex = enyo.indexOf("markdown", this.selectedNote.systemtags);
+		var pinnedIndex = enyo.indexOf("pinned",this.selectedNote.systemtags);
+		this.log(markdownIndex, pinnedIndex);
+		if (inEvent.markdown) {
+			if (markdownIndex == -1) {
+				this.selectedNote.systemtags.push("markdown");
+			}
+		}
+		else {
+			if (markdownIndex !== -1) {
+				this.selectedNote.systemtags.splice(markdownIndex, 1);
+			}
+		}
+		if (inEvent.pinned) {
+			if (pinnedIndex == -1) {
+				this.selectedNote.systemtags.push("pinned");
+			}
+		}
+		else {
+			if (pinnedIndex !== -1) {
+				this.selectedNote.systemtags.splice(pinnedIndex, 1);
+			}
+		}
+		this.log(this.selectedNote.systemtags);
+		this.saveNote();
+	},
 /* SETUP STUFF * -------------------------------------------------- */
 	handleWinParamsChanged: function (inSender, inEvent) {
 		this.log(enyo.windowParams);
@@ -247,7 +327,7 @@ enyo.kind({
 					});
 					break;
 				case "sync":
-					//this.syncNow();
+					this.syncNow();
 			}
 		}
 
@@ -276,6 +356,7 @@ enyo.kind({
 	ready: function (inSender) {
 		this.inherited(arguments);
 		this.$.mainPane.selectViewByName("mySlidingPane");
+		this.$.noteViewPane.selectViewByName("noteViewScroller");
 	},
 	getData: function () {
 		this.dataSQL.getNotes(null, "display", null, enyo.bind(this, this.updateList));
@@ -447,20 +528,23 @@ enyo.kind({
 		var note = this.selectedNote;
 		note.content = this.$.noteEdit.getValue()
 		
+		this.log(this.$.noteEdit.getText().toString());
+		this.log(this.$.noteEdit.getHtml());
+		
 		// hack to overcome bug in RichText (note: set richContent: false if fixed!
 		// also see this.displayNote() and this.placeStamp();
-		//this.log(note.content);
+		this.log(note.content);
 		note.content = note.content.replace(/<\/div>/g, "");
 		note.content = note.content.replace(/<div><br>/g, "\n")
 		note.content = note.content.replace(/<br>/g, "\n");
 		note.content = note.content.replace(/<div>/g, "\n");
 		note.content = note.content.replace(/&nbsp;/g, " ");
-		//this.log(note.content);
+		this.log(note.content);
 		//
 		
 		note.tags = this.$.tagEdit.getValue().length ? this.$.tagEdit.getValue().split(" "): [];
 		note.modifydate = new Date().getTime();
-		//this.log("Save Note: ", note);
+		this.log("Save Note: ", note);
 		this.dataSQL.updateNote(note, "plain", null);
 		this.notes[this.selectedRowIndex] = note;
 		this.$.list.refresh();
@@ -469,12 +553,25 @@ enyo.kind({
 	searchNotes: function (inSender, inEvent) {
 		//this.log(inEvent);
 		//this.log(inSender.value);
-		var sqlString = "SELECT * FROM notes WHERE (content LIKE '%" + inSender.value + "%' OR tags like '%" + inSender.value + "%')" + 
-		" AND deleted = '0' ORDER BY "  + this.appPrefs.sort + " " + this.appPrefs.sortorder + ";";
+		var sqlString = null;
+		if (inSender.value) {
+			var sqlString = "SELECT n.value, n.content, n.deleted, n.createdate, " +
+					"n.modifydate, n.key, " + 
+					"n.tags, n.systemtags, n.sharekey, n.publishkey, " + 
+					"n.syncnum, n.version, n.minversion," + 
+			" CASE WHEN n.systemtags LIKE '%pinned%' THEN 1 ELSE 0 END as pinned" +
+			" FROM notes n" +
+			" WHERE (content LIKE '%" + inSender.value + "%' OR tags like '%" + inSender.value + "%')" +
+			" AND deleted = 0" + 
+			" ORDER BY pinned DESC, "  + 
+			this.appPrefs.sort + " " + this.appPrefs.sortorder + ";";
+
+		}
 		this.dataSQL.getNotes(sqlString, null, null, enyo.bind(this, this.updateList));
 	},
 	searchCancel: function (inSender, inEvent) {
-		this.dataSQL.getNotes(null, null, null, enyo.bind(this, this.updateList));
+		//this.dataSQL.getNotes(null, null, null, enyo.bind(this, this.updateList));
+		this.getData();
 	},
 	deleteSwiped: function (inSender, inEvent) {
 		//this.log(inEvent);
@@ -530,6 +627,7 @@ enyo.kind({
 	},
 	setupRow: function(inSender, inIndex) {
 		if (this.notes[inIndex]) {
+		//if (this.notes[inIndex + this.selectedRowIndex]) {
 			this.setupDivider(inIndex);
 			var lines = this.notes[inIndex].content.split('\n');
 			if (!lines[0]) {
@@ -537,16 +635,16 @@ enyo.kind({
 				// FIXME - color style not working!
 				//this.$.notetitle.applyStyle("color", "#555555");
 			}
+			this.$.pinIcon.setShowing(enyo.indexOf("pinned", this.notes[inIndex].systemtags)!== -1);
 			this.$.notetitle.setContent(lines[0]);
 			this.$.notedate.setContent(this.setListDateString(this.notes[inIndex].modifydate));
 			//this.$.notetitle.applyStyle("enyo-text-ellipsis");
 			//this.$.notetitle.applyStyle("width: 100px;")
 			this.$.notebody.setContent(lines[1]);
-			this.$.item.applyStyle("background-color", inSender.isSelected(inIndex) ? "#f2f2f2" : null);	
-			return true;
+	    	// color the row if it is selected
+			this.$.item.applyStyle("background-color", inSender.isSelected(inIndex) ? "#f2f2f2" : null);
+				return true;
 		}
-		//var isRowSelected = (inIndex == this.selectedRow);
-	    // color the row if it is
 	},
 	setupDivider: function(inIndex) {
 		// use group divider at group transition, otherwise use item border for divider
@@ -581,10 +679,12 @@ enyo.kind({
 			this.notes = inEvent.notes;
 			//this.$.list.refresh();
 			this.$.list.punt();
-			this.$.list.select(0);
-			if (this.notes[0]) {
-				this.selectedNote = this.notes[0];
+			if (this.notes.length) {
+				//FIXME modified 12 Jul 2011 - not tested
+				this.selectedRowIndex = this.findSelectedNote(); //this.notes[0];
+				this.selectedNote = this.notes[this.selectedRowIndex];
 				this.displayNote(this.selectedNote);
+				this.$.list.select(this.selectedRowIndex);
 			}
 			else {
 				this.disableNote();
@@ -594,6 +694,15 @@ enyo.kind({
 			this.$.modifiedLabel.addStyles('pointer-events: none;')
 		}
 		this.$.noteCount.setContent(this.notes.length || "0");
+	},
+	findSelectedNote: function () {
+		var i;
+		for (i = 0; i < this.notes.length; i++) {
+			if (this.selectedNote && this.notes[i].value === this.selectedNote.value) {
+				return i;
+			}
+		}
+		return 0;
 	},
 	setModifyString: function (inDate) {
 		return new enyo.g11n.DateFmt({
@@ -612,9 +721,16 @@ enyo.kind({
 	},
 	updateTags: function (inSender, inEvent) {
 		//this.log("Tags in updateTags:", inEvent.tags);	
-		var tagsArray = ["All Notes"];
+		var tagsArray = ["All Notes"]; //, tagsObjArray = [];
 		tagsArray = tagsArray.concat(inEvent.tags.sort());
-		this.$.tagSelector.setItems(tagsArray);
+/*
+		// trying to workaround the truncation in ListSelector - didn't workaround!
+		for (i = 0; i < tagsArray.length; i++) {
+			tagsObjArray[i] = {caption: tagsArray[i], value: tagsArray[i]};
+		}
+
+*/		this.$.tagSelector.setItems(tagsArray);
+		this.log(this.$.tagSelector.getItems());
 		this.tagsArray = tagsArray.slice(1);
 		//this.log(tagsArray, this.tagsArray);
 	},
@@ -651,6 +767,7 @@ enyo.kind({
 		
 			// hack to overcome bug in RichText control
 			// also see this.saveNote() and this.placeStamp();
+
 			lines = note.content.split("\n");
 			for (i = 0; i < lines.length; i++) {
 				lines[i] = (lines[i].length > 0) ? lines[i] : "<br>";
@@ -659,17 +776,40 @@ enyo.kind({
 					lines[i] = "<div>" + lines[i] + "</div>";
 				content += lines[i];
 			}
+
 			//this.log(content);
 			//content = note.content;
 			
-			this.$.noteEdit.setValue(content); //.replace(/\n/g, "<br>"));
+			this.$.noteEdit.setValue(content.replace(/\n/g, "<br>"));
 			this.$.tagEdit.setValue(note.tags.join(" "))
-			this.$.modifiedLabel.setContent($L("Modified:") + " " + this.setModifyString(note.modifydate));
+			//this.$.modifiedLabel.setContent($L("Modified:") + " " + this.setModifyString(note.modifydate));
 			this.$.noteEdit.setDisabled(false);
 			this.$.tagEdit.setDisabled(false);
-			this.$.noteEdit.setHint($L("Enter note here..."))
+			//this.$.noteEdit.setHint($L("Enter note here..."))
 			this.$.noteCount.setContent(this.notes.length || "0");
 			//this.log("List selection!", this.$.list.getSelection());
+			//this.$.noteView.setContent(enyo.string.runTextIndexer(content));
+			var viewContent = "";
+			if (enyo.indexOf("markdown", note.systemtags) !== -1) {
+				var converter = new Showdown.converter();
+				viewContent = converter.makeHtml(note.content);
+			}
+			else {
+				lines = note.content.split("\n");
+				//this.log (note);
+				//this.log(lines);
+				for (i = 0; i < lines.length; i++) {
+					lines[i] = (lines[i].length > 0) ? lines[i] : "<br>";
+					lines[i] = lines[i].replace(/ /g, "&nbsp;");
+					if (i > 0) {
+						lines[i] = "<div>" + lines[i] + "</div>";
+					}
+					lines[i] = enyo.string.runTextIndexer(lines[i]);
+					viewContent += lines[i];
+				}
+			}
+			this.log(viewContent);
+			this.$.noteView.setContent(viewContent);
 			
 		}
 		else {
@@ -683,8 +823,9 @@ enyo.kind({
 			this.$.tagEdit.setDisabled(true);
 			this.$.tagEdit.setValue("");
 			this.$.noteEdit.setValue("");
+			this.$.noteView.setValue("");
 			this.$.noteEdit.setHint($L("Tap plus icon to enter a new note..."))
-			this.$.modifiedLabel.setContent($L("Modified:"));
+			//this.$.modifiedLabel.setContent($L("Modified:"));
 			this.$.noteCount.setContent("0");
 	},
 	listClicked: function (inSender, inEvent) {
@@ -807,6 +948,7 @@ enyo.kind({
 		this.$.syncButton.hide();
 		this.$.syncSpinner.show();
 		this.$.syncContent.setContent("Sync Log (tap to close) <br />");
+		//this.$.syncLog.open();
 		//this.startSyncAnimation = enyo.bind(this, this.startSyncAnimation());
 		//this.startSyncAnimation();
 		
@@ -838,7 +980,7 @@ enyo.kind({
 	},
 	updateSyncLog: function (inSender, inEvent) {
 		//this.log(inEvent);
-		this.$.syncLog.open();
+		//this.$.syncLog.open();
 		//this.$.syncContent.setContent("New Sync Log <br />");
 		if (inEvent.message) {
 			var newContent = this.$.syncContent.getContent() + inEvent.message + "<br/>";
@@ -850,7 +992,7 @@ enyo.kind({
 				this.$.syncProgressBar.setPosition(inEvent.position);
 		}
 		//this.$.syncContent.setContent("Newer Sync Log <br />");
-		//this.$.syncContent.render();
+		this.$.syncContent.render();
 		//this.$.syncLog.render();
 	},
 	removeSyncLog: function (inSender, inEvent) {
@@ -915,14 +1057,19 @@ enyo.kind({
 			this.placeStamp(inSender, inEvent);
 		}
 	},
+	noteEditBlur: function (inSender, inEvent) {
+		this.log(inSender, inEvent);
+			//var pos = this.$.noteEdit.getSelection();
+			//this.log("Get position", pos);
+	},
 	placeStamp: function (inSender,inEvent) {
 		//this.log(inSender, inEvent);
 			var textField, pos, start, end, stamp, note;
 			type = inSender.value ? inSender.value : 'both';
 			textField = this.$.noteEdit;
 			note = (textField.getValue()) ? textField.getValue() : "";
-			//pos = window.getSelection();
-			//this.log("Get position", pos);
+			pos = this.$.noteEdit.getSelection();
+			this.log("Get position", pos);
 			//Mojo.Log.info("Position: %j", pos);
 			switch (type) {
 				case 'time':

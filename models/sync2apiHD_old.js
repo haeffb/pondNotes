@@ -27,7 +27,6 @@ enyo.kind({
 */		{name: "connectionService", kind: "PalmService", 
 			service: "palm://com.palm.connectionmanager",
 			method: "getstatus",
-			subscribe: true,
 			onSuccess: "gotConnection", onFailure: "failedConnection"
 		}
 	],
@@ -37,10 +36,9 @@ enyo.kind({
 		this.lastSyncLocal = 0;
 		this.lastSyncServer = 0;
 		this.dataSQL = enyo.application.appDB;
-		//this.log("Created Sync: ", this.dataSQL);
 		
 	},
-	getSyncTimes: function () {
+	setSyncTimes: function () {
 			this.lastSyncLocal = enyo.application.appPrefs.lastSyncLocal;
 			this.lastSyncServer = enyo.application.appPrefs.lastSyncServer;
 	},
@@ -55,14 +53,9 @@ enyo.kind({
 	
 /* BEGIN SYNC PROCESS * ----------------------------------------- */
 	beginSync: function() {
-		this.log(" ======================  Starting Sync Process ==============================");
-		enyo.time("sync");	
-		this.dataSQL = enyo.application.appDB; // get reference to database
-		this.getSyncTimes();
+		this.log(" ======================  Starting Sync Process ==============================");	
+		this.setSyncTimes();
 		this.webNotesModified = [];
-		this.localNotesModified = [];
-		this.newLocalNotes = [];
-		this.webIndex = [] // array of keys for web notes - check against local for deleted web notes	
 		this.newLastSyncLocal = new Date().getTime();
 		this.synced = {
 			notes: false,
@@ -103,37 +96,37 @@ enyo.kind({
 		});
 		this.startedDeleted = false;
 		this.startedLocal = false;
+		this.webNotesModified = [];
 		this.syncFail = [];
-
-		// Begin by checking for connection
+		this.webIndex = [] // array of keys for web notes - check against local for deleted web notes	
 		this.$.connectionService.call(); // event handler: gotConnection 
 	},
 	updatePosition: function () {
-		//this.log(this.doing);
-		//this.log(this.count);
-		//this.log(this.total);
+		this.log(this.doing);
+		this.log(this.count);
+		this.log(this.total);
 		var pos = this.total.token + 2;
 		if (this.doing.localmodified) pos += this.total.localmodified ? 20* (this.total.localmodified - this.count.localmodified)/this.total.localmodified: 20;
 		if (this.doing.notesadded) pos += this.total.notesadded ? 20* (this.total.notesadded - this.count.notesadded)/this.total.notesadded: 20; 
 		if (this.doing.notes) pos += this.total.notes ? 20* (this.total.notes - this.count.notes)/this.total.notes : 20;
 		if (this.doing.apinotes) pos += this.total.apinotes ? 20* (this.total.apinotes - this.count.apinotes)/this.total.apinotes: 20; 
 		if (this.doing.notesdeleted) pos += this.total.notesdeleted? 15* (this.total.notesdeleted - this.count.notesdeleted)/this.total.notesdeleted: 15;
-		//this.log("position: ", pos);
+		this.log("position: ", pos);
 		return pos;
 	},
 	gotConnection: function (inSender, inResponse) {
-		//this.log("Connection Response", inResponse);
+		this.log("Connection Response", inResponse);
 		//debugObject(inResponse, "noFuncs");
 		if (inResponse.isInternetConnectionAvailable) {
 			
 			// FIXME change false to pref for sync only on wifi
 			if (false ||
 			inResponse.wifi.state === 'connected') {
-				//this.log("Getting Token");
+				this.log("Getting Token");
 				this.$.simplenoteAPI.getToken();	
 			}
 			else {
-				//this.log("Wifi not available!");
+				this.log("Wifi not available!");
 				this.syncFail.push({
 					type: "wifi"
 				});
@@ -142,7 +135,7 @@ enyo.kind({
 			}
 		}
 		else {
-				//this.log("Data connection not available!");
+				this.log("Data connection not available!");
 				this.syncFail.push({
 					type: "connection"
 				});
@@ -151,17 +144,17 @@ enyo.kind({
 		}
 	},			
 	failedConnection: function(inSender, inResponse){
-		//this.log("Connection Status Service Request FAILED!");
+		this.log("Connection Status Service Request FAILED!");
 		this.syncFail.push({type: "connectionservice"});
 		this.syncFinished({sync: "failure", message: $L("Failed to get connection information from device!")})	
 	},
 	
-/* FIRST STEP - retrieve token call from gotConnection and get index from Simplenote * ----------------------------- */
+/* FIRST STEP - retrieve token call from gotConnection and get modified notes from DB * ----------------------------- */
 	apiGotToken: function (inSender, inEvent) {
 		if (inEvent.token && inEvent.token === "success") {
-			//this.log("Token retrieved!");
+			this.log("Token retrieved!");
 			this.total.token = 3;
-			//this.log(this.updatePosition());
+			this.log(this.updatePosition());
 			this.doSyncLog({message: "Token Retrieved", position: this.updatePosition()});
 			
 			// Get locally modified notes
@@ -169,48 +162,19 @@ enyo.kind({
 			this.lastSyncLocal +
 			" AND key != 0;";
 			//this.dataSQL.getNotes(sqlString, "modified", null, enyo.bind(this, this.dbNotesRetrieved));
-			//this.log("Getting index for deleted notes");
+			this.log("Getting index for deleted notes");
 			this.$.simplenoteAPI.getIndexForDeleted(null, null);
 		}
 		else {
 			this.syncFail.push({type: "token"});
-			//this.log("Failed to retrieve token for sync");
+			this.log("Failed to retrieve token for sync");
 			this.doSyncLog({message: "Sync Failed - Failed to retrieve token from Simplenote"});
 			this.syncFinished({sync: "failure", message: $L("Failed to retrieve token from Simplenote!")})
 		}
 	},
-	apiGotIndexForDeleted: function (inSender, inEvent) {
-		if (inEvent.index && inEvent.index.data) {
-			//this.log("SYNC: apiGotIndexForDeleted:", inEvent.index.data.length);
-			var index = inEvent.index;
-			this.newLastSyncServer = index.time;			
-			for (i = 0; i < index.data.length; i++) {
-				//this.log("SYNC: data from index", i, index.data[i].key)
-				this.webIndex.push(index.data[i]);
-			}
-			if (index.mark) {
-				//need to retrieve more notes
-				//this.log("SYNC: apiGotIndexForDeleted, getting another index");
-				this.$.simplenoteAPI.getIndexForDeleted(index.mark, null);
-			}
-			else {
-				// check list of notes on web versus device to see if notes deleted from
-				// web need to be deleted from device
-				var sqlString = "SELECT * FROM notes;";
-				this.dataSQL.getNotes(sqlString, "notesdeleted", null, enyo.bind(this, this.dbNotesRetrieved));
-			}
-		}
-		else {
-			this.syncFail.push({type: "index"});
-			//this.log("Failed to retrieve index from Simplenote");
-			this.doSyncLog({message: "Sync Failed - Failed to retrieve index from Simplenote for deleted notes!"});
-			this.syncFinished({sync: "failure", message: $L("Failed to retrieve index from Simplenote!")})
-		}
-
-	},
 	dbNotesRetrieved: function (inSender, inEvent) {
 		// handle notes depending on which type of request
-		//this.log("SYNC: Got notes from DB:", inEvent.notes, inEvent.type, inEvent.originalNote);
+		this.log("SYNC: Got notes from DB:", inEvent.notes, inEvent.type, inEvent.originalNote);
 		switch(inEvent.type) {
 			// any notes that are new on device (key = 0)
 			case "new":
@@ -218,7 +182,7 @@ enyo.kind({
 				break;
 			// any notes that have been modified on device (modifydate > sync date)
 			case "modified":
-				//this.log ("Got Notes");
+				this.log ("Got Notes");
 				this.syncLocalToWeb(inEvent.notes);
 				break;
 			// single note from API - check against database to see if updated or new
@@ -230,63 +194,12 @@ enyo.kind({
 				this.checkWebDeleted(inEvent.notes);
 		}
 	},
-	checkWebDeleted: function (localNotes) {
-		this.localNotes = localNotes;
-		this.log("Local notes index:", localNotes.length);
-		this.log("Web notex index", this.webIndex.length);
-		// delete local notes that no longer exist on server
-		this.doSyncLog({message: "Checking for notes deleted from Simplenote"});
-		var ii, jj, count = 0, found, notesToDelete = [];
-		for (ii = 0; ii < localNotes.length; ii++) {
-			found = false;
-			//this.log("local", localNotes[ii].key);
-			for (jj = 0; jj < this.webIndex.length; jj++) {
-				if (this.webIndex[jj].key == localNotes[ii].key || localNotes[ii].key == 0) {
-					found = true;
-					//this.log("Found note!", ii, localNotes[ii].key);
-				}
-			}
-			if (!found) {
-				//this.log("Delete note", ii, count, localNotes[ii].key);
-				this.count.notesdeleted += 1;
-				count += 1;
-				notesToDelete.push(localNotes[ii]);
-				//this.dataSQL.deleteNote(localNotes[ii], "notesdeleted", enyo.bind(this, this.dbNoteDeleted);
-			}
-		}	
-		//this.log("SYNC: Deleting from local", count);
-		var message = count == 1 ? "note" : "notes";
-		this.doSyncLog({message: "Deleting " + count + " local " + message + " deleted from Simplenote"});
-		this.total.notesdeleted = count;
-		this.doing.notesdeleted = true;
-		if (!count) {
-			this.count.notesdeleted = 1;
-			this.finishTransactions('notesdeleted');
-		}
-		else {
-			this.dataSQL.deleteNotes(notesToDelete, "notesdeleted", enyo.bind(this, this.dbNoteDeleted));
-/*
-			for (ii = 0; ii < count; ii++) {
-				this.dataSQL.deleteNote(notesToDelete[ii], "notesdeleted", enyo.bind(this, this.dbNoteDeleted));
-			}
-
-*/		}
-	
-	},
 	
 /* SECOND STEP - local modified notes update to web * ----------------------------- */
 	syncLocalToWeb: function (inNotes) {
-		var i, inNotes = [];
+		var i;
 		// Sync Local Modified notes to web
-		//this.log("SYNC: Local modified to web", inNotes.length);
-		for (i = 0; i < this.localNotes.length; i++) {
-			//this.log("Local", this.localNotes[i].modifydate, "Sync", this.lastSyncLocal, "Key", this.localNotes[i].key);
-			if (this.localNotes[i].modifydate > this.lastSyncLocal 
-					&& this.localNotes[i].key != 0) {
-				inNotes.push(this.localNotes[i]);
-			}
-				
-		}
+		this.log("SYNC: Local modified to web", inNotes.length);
 
 		this.total.localmodified = inNotes.length ? inNotes.length : 0; 
 		this.doing.localmodified = true;
@@ -307,22 +220,12 @@ enyo.kind({
 		}
 		
 		//Get new local notes and send to web
-/*
 		var sqlString = "SELECT * FROM notes WHERE key = 0;";
 		this.dataSQL.getNotes(sqlString, "new", null, enyo.bind(this, this.dbNotesRetrieved));
-
-*/	
-		this.syncNewLocalToWeb();
 	},
 	syncNewLocalToWeb: function (inNotes) {
-		var i, inNotes=[];
-		for (i = 0; i < this.localNotes.length; i++) {
-			if (this.localNotes[i].key == 0) {
-				inNotes.push(this.localNotes[i]);
-			}
-				
-		}
-		//this.log("Sending New Notes to Web: ", inNotes.length);
+		var i;
+		this.log("Sending New Notes to Web: ", inNotes.length);
 		this.doSyncLog({message: "Sending " + inNotes.length + 
 			" new local notes to Simplenote"
 		});
@@ -330,7 +233,7 @@ enyo.kind({
 		this.doing.notesadded = true;
 		if (inNotes.length) {
 			for (i = 0; i < inNotes.length; i++) {
-				//this.log("Creating note", i, inNotes[i]);
+				this.log("Creating note", i, inNotes[i]);
 				this.count.notesadded += 1;
 				this.$.simplenoteAPI.createNote(inNotes[i]);
 			}
@@ -340,14 +243,13 @@ enyo.kind({
 			this.finishTransactions('notesadded');
 		}
 		
-		//this.$.simplenoteAPI.getIndex(null, this.lastSyncServer);
-		this.syncWebToLocal();
+		this.$.simplenoteAPI.getIndex(null, this.lastSyncServer);
 	},	
 	apiGotCreate: function (inSender, inEvent) {
-		//this.log("SYNC note created", inEvent);
+		this.log("SYNC note created", inEvent);
 		if (inEvent.error) {
 			//failure in api.createNote request
-			//this.log("Failure in api createNote!");
+			this.log("Failure in api createNote!");
 			this.finishTransactions('notesadded');
 			this.doSyncLog({message: "Failed to create note in Simplenote: " + inEvent.note.content.substr(0, 30)});
 			this.syncFail.push({type: "create", note: inEvent.note});
@@ -366,13 +268,13 @@ enyo.kind({
 		
 	},
 	dbNoteCreated: function (inSender, inType) {
-		//this.log("SYNC: Note created", inType, inSender);
+		this.log("SYNC: Note created", inType, inSender);
 		this.doSyncLog({position: this.updatePosition()});
 		this.finishTransactions(inType);
 	},
 	apiGotUpdate: function (inSender, inEvent) {
-		//this.log("Local mod note", inEvent.note);
-		//this.log("Response from updateNote API", inEvent.response);
+		this.log("Local mod note", inEvent.note);
+		this.log("Response from updateNote API", inEvent.response);
 		if (inEvent.response && inEvent.note.key === inEvent.response.key) {
 			// we're good!
 			//if response contains content, the note had previously been
@@ -387,7 +289,7 @@ enyo.kind({
 		}
 		else {
 			// failure in api.updateNote
-			//this.log("Failure in API Update!!!");
+			this.log("Failure in API Update!!!");
 			this.finishTransactions('localmodified');
 			this.syncFail.push({type: "update", note: inEvent.note});
 			this.doSyncLog({message: "Failed to update note in Simplenote: " + inEvent.note.content.substr(0,30)});
@@ -403,16 +305,16 @@ enyo.kind({
 	
 	apiGotIndex: function (inSender, inEvent) {
 		if (inEvent.index && inEvent.index.data) {
-			//this.log("SYNC: apiGotIndex:", inEvent.index.data.length);
+			this.log("SYNC: apiGotIndex:", inEvent.index.data.length);
 			var index = inEvent.index;
 			this.newLastSyncServer = index.time;
 			for (i = 0; i < index.data.length; i++) {
-				//this.log("SYNC: data from index", i, index.data[i].key)
+				this.log("SYNC: data from index", i, index.data[i].key)
 				this.webNotesModified.push(index.data[i]);
 			}
 			if (index.mark) {
 				//need to retrieve more notes
-				//this.log("SYNC: apiGotIndex, getting another index");
+				this.log("SYNC: apiGotIndex, getting another index");
 				this.$.simplenoteAPI.getIndex(index.mark, this.lastSyncServer);
 			}
 			else {
@@ -424,7 +326,7 @@ enyo.kind({
 		}
 		else {
 			this.syncFail.push({type: "index"});
-			//this.log("Failed to retrieve index");
+			this.log("Failed to retrieve index");
 			this.doSyncLog({message: "Sync Failed - Failed to retrieve index from Simplenote!"});
 			this.syncFinished({sync: "failure", message: $L("Failed to retrieve index from Simplenote!")})
 		}
@@ -432,13 +334,6 @@ enyo.kind({
 	},
 	syncWebToLocal: function () {
 		var i;
-		
-		for (i = 0; i < this.webIndex.length; i++) {
-			//this.log("web", this.webIndex[i].modifydate, this.lastSyncServer);
-			if (this.webIndex[i].modifydate > this.lastSyncServer) {
-				this.webNotesModified.push(this.webIndex[i]);
-			}
-		}
 		this.log("SYNC: Syncing web to local", this.webNotesModified.length);
 		this.doSyncLog({message: "Retrieving " + this.webNotesModified.length + " modified notes from Simplenote"});
 		this.total.notes = this.webNotesModified.length ? this.webNotesModified.length : 0;
@@ -446,7 +341,7 @@ enyo.kind({
 		if (this.webNotesModified.length) {
 			for (i = 0; i < this.webNotesModified.length; i++) {
 				this.count.notes += 1;
-				//this.log("SYNC: getting note from API:", this.webNotesModified[i].key);
+				this.log("SYNC: getting note from API:", this.webNotesModified[i].key);
 				this.$.simplenoteAPI.getNote(this.webNotesModified[i].key);
 			}
 		}
@@ -457,68 +352,114 @@ enyo.kind({
 		
 		//retrieve web notes index to compare to local notes - find notes
 		//that have been deleted from web but still on local
-		//this.log("Getting index for deleted notes");
+		this.log("Getting index for deleted notes");
 		//this.$.simplenoteAPI.getIndexForDeleted(null, null);
 		
 	},
+	apiGotIndexForDeleted: function (inSender, inEvent) {
+		if (inEvent.index && inEvent.index.data) {
+			this.log("SYNC: apiGotIndexForDeleted:", inEvent.index.data.length);
+			var index = inEvent.index;
+			//this.newLastSyncServer = index.time;			
+			for (i = 0; i < index.data.length; i++) {
+				this.log("SYNC: data from index", i, index.data[i].key)
+				this.webIndex.push(index.data[i]);
+			}
+			if (index.mark) {
+				//need to retrieve more notes
+				this.log("SYNC: apiGotIndexForDeleted, getting another index");
+				this.$.simplenoteAPI.getIndexForDeleted(index.mark, null);
+			}
+			else {
+				// check list of notes on web versus device to see if notes deleted from
+				// web need to be deleted from device
+				var sqlString = "SELECT * FROM notes WHERE key > 0;";
+				this.dataSQL.getNotes(sqlString, "notesdeleted", null, enyo.bind(this, this.dbNotesRetrieved));
+			}
+		}
+		else {
+			this.syncFail.push({type: "index"});
+			this.log("Failed to retrieve index from Simplenote");
+			this.doSyncLog({message: "Sync Failed - Failed to retrieve index from Simplenote for deleted notes!"});
+			this.syncFinished({sync: "failure", message: $L("Failed to retrieve index from Simplenote!")})
+		}
+
+	},
+	checkWebDeleted: function (localNotes) {
+		this.log("Local notes index:", localNotes.length);
+		this.log("Web notex index", this.webIndex.length);
+		// delete local notes that no longer exist on server
+		this.doSyncLog({message: "Checking for notes deleted from Simplenote"});
+		var ii, jj, count = 0, found, notesToDelete = [];
+		for (ii = 0; ii < localNotes.length; ii++) {
+			found = false;
+			this.log("local", localNotes[ii].key);
+			for (jj = 0; jj < this.webIndex.length; jj++) {
+				if (this.webIndex[jj].key == localNotes[ii].key) {
+					found = true;
+					this.log("Found note!", ii, localNotes[ii].key);
+				}
+			}
+			this.log("Woo", localNotes[ii]);
+			if (!found) {
+				this.log("Delete note", ii, count, localNotes[ii].key);
+				this.count.notesdeleted += 1;
+				count += 1;
+				notesToDelete.push(localNotes[ii]);
+				//this.dataSQL.deleteNote(localNotes[ii], "notesdeleted", enyo.bind(this, this.dbNoteDeleted);
+			}
+		}	
+		this.total.notesdeleted = count;
+		this.doing.notesdeleted = true;
+		if (!count) {
+			this.count.notesdeleted = 1;
+			this.finishTransactions('notesdeleted');
+		}
+		else {
+			for (ii = 0; ii < count; ii++) {
+				this.dataSQL.deleteNote(notesToDelete[ii], "notesdeleted", enyo.bind(this, this.dbNoteDeleted));
+			}
+		}
+	
+	},
 	dbNoteDeleted: function (inSender, inEvent) {
-		//this.log("Deleted!");
+		this.log("Deleted!");
 		this.doSyncLog({position: this.updatePosition()});
 		if (inEvent.type === "notesdeleted") {
 			this.finishTransactions('notesdeleted');
 		}
 	},
 	apiGotNote: function (inSender, inEvent) {
-		var i, found = false;
 		if (inEvent.note.code) {
 			// failure in api.getNote request
 			this.syncFail.push({type: "note", note: inEvent.note});
-			//this.log("Failure to get note from server");
+			this.log("Failure to get note from server");
 			this.doSyncLog({message: "Failed to retrieve note from Simplenote!"});
 			this.finishTransactions('notes');
 			enyo.windows.addBannerMessage($L("Failed to get note from Simplenote!"), "{}", "smallicon");
 		}
 		else {
 			// check to see if note already in database
-			//this.log("SYNC: got Note from API, checking DB", inEvent.note.key);
+			this.log("SYNC: got Note from API, checking DB", inEvent.note.key);
 			var sqlString;
-/*
 			sqlString = "SELECT * FROM notes WHERE key = '" +
 				inEvent.note.key +
 				"';";
 			this.dataSQL.getNotes(sqlString, "notes", inEvent.note, enyo.bind(this, this.dbNotesRetrieved));
-
-*/
-			for (i = 0; i < this.localNotes.length; i ++) {
-				if (this.localNotes[i].key == inEvent.note.key) {
-					found = this.localNotes[i].value;
-				}
-			}
-			if (found) {
-				//this.log("Checked note and found existing", inEvent.notes );
-				inEvent.note.value = found;
-				this.dataSQL.updateNote(inEvent.note, 'notes', enyo.bind(this, this.dbNoteUpdated));		
-			}	
-			else {
-				inEvent.note.value = inEvent.note.key;
-				//this.log("Checked note and creating new", inEvent.note);
-				this.dataSQL.createNote(inEvent.note, 'notes', enyo.bind(this, this.dbNoteCreated));			
-				
-			}
 			this.finishTransactions("apinotes");
 			this.doSyncLog({position: this.updatePosition()});
 		}
 	},
 	checkedNote: function (inEvent) {
-		//this.log("Checking Note: ", inEvent.notes, inEvent.type, inEvent.originalNote);
+		this.log("Checking Note: ", inEvent.notes, inEvent.type, inEvent.originalNote);
 		if (inEvent.notes.length) {
-			//this.log("Checked note and found existing", inEvent.notes );
+			this.log("Checked note and found existing", inEvent.notes );
 			inEvent.originalNote.value = inEvent.notes[0].value;
 			this.dataSQL.updateNote(inEvent.originalNote, 'notes', enyo.bind(this, this.dbNoteUpdated));		
 		}	
 		else {
 			inEvent.originalNote.value = inEvent.originalNote.key;
-			//this.log("Checked note and creating new", inEvent.originalNote);
+			this.log("Checked note and creating new", inEvent.originalNote);
 			this.dataSQL.createNote(inEvent.originalNote, 'notes', enyo.bind(this, this.dbNoteCreated));			
 		}
 		
@@ -528,9 +469,9 @@ enyo.kind({
 	finishTransactions: function (type) {
 		this.count[type] -= 1;
 		this.doSyncLog({position: this.updatePosition()});
-		//this.log("Transaction type: ", type, this.count[type]);
+		this.log("Transaction type: ", type, this.count[type]);
 		if (this.count[type] <= 0) {
-			//this.log("Sync finished for ", type);
+			//Mojo.Log.info("Sync finished for ", type);
 			this.synced[type] = true;
 		}
 		
@@ -554,18 +495,14 @@ enyo.kind({
 		if (this.synced.notesdeleted &&
 				!this.startedLocal) {
 			// Get locally modified notes
-/*
 			var sqlString = "SELECT * FROM notes WHERE modifydate > " +
 			this.lastSyncLocal +
 			" AND key != 0;";
 			this.dataSQL.getNotes(sqlString, "modified", null, enyo.bind(this, this.dbNotesRetrieved));
-
-*/			this.startedLocal = true
-			this.syncLocalToWeb();
+			this.startedLocal = true
 		}
 	},
 	syncFinished: function (inEvent) {
-		this.log("=============== Sync Finished in " + enyo.timeEnd("sync")/1000 + " seconds =============");
 		if (inEvent.sync && inEvent.sync === "success" && !this.syncFail.length) {
 			enyo.application.appPrefs.lastSyncLocal = this.newLastSyncLocal;
 			this.lastSyncLocal = this.newLastSyncLocal;

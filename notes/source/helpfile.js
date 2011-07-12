@@ -16,9 +16,9 @@ enyo.kind({
 		this.$.loadHtml.call()
 	},
 	gotContent: function (inSender, inEvent) {
-		this.log(inEvent);
+		//this.log(inEvent);
 		this.$.helpContents.setContent(inEvent);
 		this.render();
-		this.log();
+		//this.log();
 	}
 });

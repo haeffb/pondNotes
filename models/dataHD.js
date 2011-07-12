@@ -24,7 +24,7 @@ enyo.kind ({
 		
 	},
 	createDB: function (inSender) {
-		this.log("Opening Database!");
+		//this.log("Opening Database!");
 		this.db = openDatabase(this.databaseName, "1.0", this.displayName, null);
 		//this.doDBCreated();
 		this.createTable(inSender);
@@ -72,6 +72,34 @@ enyo.kind ({
 						inNote.version, inNote.minversion
 					], 
 					enyo.bind(this,this.createNoteDataHandler, inType, inCallback), enyo.bind(this,this.errorHandler)); 
+		        }))
+		    );
+	},
+	createNotes: function (inNotesArray, inType, inCallback) {
+		//this.log("db Create Note with ", inNotesArray, inType);
+		var i, inNote, sqlCreateNote = "INSERT INTO 'notes' " + 
+			"(value, content, deleted, createdate, " +
+			"modifydate, key, " + 
+			"tags, systemtags, sharekey, publishkey, " + 
+			"syncnum, version, minversion) " +
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+		    this.db.transaction( 
+		        enyo.bind(this,(function (transaction) { 
+					for (i = 0; i < inNotesArray.length; i++) {
+						inNote = inNotesArray[i];
+						transaction.executeSql(sqlCreateNote, 
+							[	
+								// tags and systemtags are arrays of strings. Use stringify() and
+								// parse() to store the arrays as strings in SQLite
+								inNote.value, inNote.content, inNote.deleted, inNote.createdate, 
+								inNote.modifydate, inNote.key, enyo.json.stringify(inNote.tags), 
+								enyo.json.stringify(inNote.systemtags), inNote.sharekey, 
+								inNote.publishkey, inNote.syncnum, inNote.version, 
+								inNote.minversion
+							], 
+							enyo.bind(this, this.createNoteDataHandler, inType, inCallback), 
+							enyo.bind(this, this.errorHandler));
+					} 
 		        }))
 		    );
 	},
@@ -124,6 +152,18 @@ enyo.kind ({
 		this.doNoteDeleted({type: inType});
 		if (inCallback) inCallback(this, {type: inType});
 	},
+	deleteNotes: function (inNotesArray, inType, inCallback) {
+		var i, sqlDeleteNote = "DELETE FROM 'notes' WHERE value = ?;";
+		this.db.transaction(
+			enyo.bind(this, function (transaction) {
+				for (i = 0; i < inNotesArray.length; i++) {
+					transaction.executeSql(sqlDeleteNote, [inNotesArray[i].value],
+					enyo.bind(this,this.deleteNoteDataHandler, inType, inCallback), 
+					enyo.bind(this,this.errorHandler)); 
+				}
+			})
+		)
+	},
 	deleteAllNotes: function (inCallback) {
 		var sqlDeleteAllNotes = "DELETE FROM 'notes';";
 	    this.db.transaction( 
@@ -141,11 +181,17 @@ enyo.kind ({
 	},
 	getNotes: function (inString, inType, inNote, inCallback) {
 		var appPrefs = enyo.application.appPrefs;	
-		inString = inString ? inString :
-			"SELECT * FROM notes WHERE deleted = 0 ORDER BY "  + appPrefs.sort + " " + appPrefs.sortorder + ";";
-		//this.log("Getting notes with string:", inString);
-		//this.log(inString);
-		this.db.transaction(
+		var defaultString = "SELECT n.value, n.content, n.deleted, n.createdate, " +
+				"n.modifydate, n.key, " + 
+				"n.tags, n.systemtags, n.sharekey, n.publishkey, " + 
+				"n.syncnum, n.version, n.minversion," + 
+		" CASE WHEN n.systemtags LIKE '%pinned%' THEN 1 ELSE 0 END as pinned" +
+		" FROM notes n" +
+		" WHERE deleted = 0" + 
+		" ORDER BY pinned DESC, "  + appPrefs.sort + " " + appPrefs.sortorder + ";";
+		inString = inString ? inString : defaultString;
+		this.log("Getting notes with string:", inString);
+		this.db.readTransaction(
 			enyo.bind(this, (function (transaction) {
 				transaction.executeSql(inString, [],
 					enyo.bind(this, this.getNotesDataHandler, inType, inNote, inCallback), enyo.bind(this, this.errorHandler));
@@ -161,12 +207,15 @@ enyo.kind ({
 				aNote = results.rows.item(i);
 				notes[i] = {};
 				//this.log("Result in retrieveNotes db:", aNote);
+/*
 				for (prop in aNote) {
 					//this.log("Property: ", prop, aNote[prop]);
 					notes[i][prop] = aNote[prop];
 				}
-				// tags and systemtags are arrays of strings. Use stringify() and
+
+*/				// tags and systemtags are arrays of strings. Use stringify() and
 				// parse() to store the arrays as strings in SQLite
+				notes[i] = enyo.clone(results.rows.item(i));
 				notes[i].tags = enyo.json.parse(notes[i].tags);
 				notes[i].systemtags = enyo.json.parse(notes[i].systemtags);
 				//this.log("Note is", notes[i]);
@@ -189,7 +238,7 @@ enyo.kind ({
 	},
 	getTags: function (inType, inCallback) {
 		var sqlString = "SELECT DISTINCT tags AS label FROM notes;"; 
-		this.db.transaction(
+		this.db.readTransaction(
 			enyo.bind(this, (function (transaction) {
 				transaction.executeSql(sqlString, [],
 					enyo.bind(this, this.getTagsDataHandler, inCallback), enyo.bind(this, this.errorHandler));

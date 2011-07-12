@@ -5,7 +5,20 @@
 .red {
 	color: red;
 }
-
+.enyo-radiogroup {
+	white-space: nowrap;
+	cursor: pointer;
+	margin: 0 0;
+	vertical-align: middle;
+}
+.enyo-radiobutton, .enyo-tabbutton {
+	text-align: center;
+	vertical-align: middle;
+	-webkit-box-sizing: border-box;
+	font-size: 18px;
+	border-width: 0px 17px;
+	padding: 7px 0 8px 0;
+}
 .sync-progress {
 	
 }
@@ -43,6 +56,14 @@
 	
 }
 
+/* Tag input */
+.tag-input {
+	height: 20px;
+	width: 30px;
+	margin: 2px;
+	background-image: url(images/icon-tags-menu.png);
+}
+
 /* Notes List */
 .notelist-width {
 	width: 300px;
@@ -56,9 +77,31 @@
 	background-color: #999;
 	-webkit-border-radius: 1em;
 	padding: 1px 6px;
+	margin: 0 15px;
 	min-width: 2em;
 	text-align: center;
 	/* border: 1px solid #ddd; */
+}
+
+/* Note View */
+.note-view {
+	background-color: white;
+	padding: 12px 10px;
+	font-size: 0.9rem;
+}
+.note-view h1 {
+	font-size: 25px;
+	font-weight: bold;
+}
+.note-view h2 {
+	font-size: 20px;
+	font-weight: bold;
+}
+.note-view h3 {
+	font-size: 20px;
+}
+.note-view body {
+	font-size: 17px;
 }
 
 /* Error */

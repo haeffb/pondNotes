@@ -75,9 +75,9 @@ enyo.kind({
 		enyo.setCookie("notedPrefs", enyo.json.stringify(enyo.application.appPrefs));
 	},
 
-// DATABASE Events - pass to Sync or Display depending on caller
+// DATABASE Events
 	dbInitialized: function (inSender, inEvent) {
-		//this.log("Database has been initialized!", inEvent.database)
+		this.log("Database has been initialized!", inEvent.database)
 		enyo.application.appDB = this.$.dataSQL;
 		var launcher = this;
 
@@ -111,9 +111,11 @@ enyo.kind({
 	
 //SYNC Events - pass to display or ???
 	syncFinished: function (inSender, inEvent) {
+		window.close();
 		
 	},
 	syncUpdateSyncLog: function (inSender, inEvent) {
+		this.log(inEvent);
 		
 	},
 	syncCheckLogin: function (inSender, inEvent) {
@@ -129,7 +131,7 @@ enyo.kind({
 	startup: function () {
 //		this.$.dataSQL.initialize();
 		this.log("Startup in pondAppLaunch");
-		//this.setSyncTimer(0.5);
+		this.setSyncTimer(60);
 	},
 	
 	relaunch: function (params) {
@@ -148,6 +150,8 @@ enyo.kind({
 					else {
 						this.launchSync(params);
 					}
+					this.setSyncTimer(60);
+					//this.setSyncTimer(1);
 					break;
 			}
 		}
@@ -157,6 +161,7 @@ enyo.kind({
 	},
 	launchSync: function (params) {
 		this.log("Launching Background Sync");
+		this.$.simplenoteSync.beginSync();
 	},
 	
 	openCard: function (type, windowParams, forceNewCard) {
