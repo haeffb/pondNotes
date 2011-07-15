@@ -47,7 +47,7 @@ enyo.kind({
       this.doClose();
    },
    openWebsite: function() {
-		this.log("Opening Website");
+		//this.log("Opening Website");
       this.$.service.call({id: "com.palm.app.browser", params: {target: this.appInfo.support.url}, onSuccess: "openWebsiteSuccess", onFailure: "openWebsiteFailure"});
    },
    openWebsiteSuccess: function() {
@@ -57,7 +57,7 @@ enyo.kind({
       console.log("open website failure");   
    },
    openEmail: function() {
-   		this.log("Opening Email");
+   		//this.log("Opening Email");
       this.$.service.call({id: "com.palm.app.email", params: {summary: this.appInfo.support.email.subject + " " + this.appInfo.version, address: this.appInfo.support.address}, onSuccess: "openEmailSuccess", onFailure: "openEmailFailure"});
    },
    openEmailSuccess: function() {

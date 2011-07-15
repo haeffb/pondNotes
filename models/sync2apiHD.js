@@ -55,7 +55,7 @@ enyo.kind({
 	
 /* BEGIN SYNC PROCESS * ----------------------------------------- */
 	beginSync: function() {
-		this.log(" ======================  Starting Sync Process ==============================");
+		//this.log(" ======================  Starting Sync Process ==============================");
 		enyo.time("sync");	
 		this.dataSQL = enyo.application.appDB; // get reference to database
 		this.getSyncTimes();
@@ -232,8 +232,8 @@ enyo.kind({
 	},
 	checkWebDeleted: function (localNotes) {
 		this.localNotes = localNotes;
-		this.log("Local notes index:", localNotes.length);
-		this.log("Web notex index", this.webIndex.length);
+		//this.log("Local notes index:", localNotes.length);
+		//this.log("Web notex index", this.webIndex.length);
 		// delete local notes that no longer exist on server
 		this.doSyncLog({message: "Checking for notes deleted from Simplenote"});
 		var ii, jj, count = 0, found, notesToDelete = [];
@@ -439,7 +439,7 @@ enyo.kind({
 				this.webNotesModified.push(this.webIndex[i]);
 			}
 		}
-		this.log("SYNC: Syncing web to local", this.webNotesModified.length);
+		//this.log("SYNC: Syncing web to local", this.webNotesModified.length);
 		this.doSyncLog({message: "Retrieving " + this.webNotesModified.length + " modified notes from Simplenote"});
 		this.total.notes = this.webNotesModified.length ? this.webNotesModified.length : 0;
 		this.doing.notes = true;
@@ -565,7 +565,7 @@ enyo.kind({
 		}
 	},
 	syncFinished: function (inEvent) {
-		this.log("=============== Sync Finished in " + enyo.timeEnd("sync")/1000 + " seconds =============");
+		//this.log("=============== Sync Finished in " + enyo.timeEnd("sync")/1000 + " seconds =============");
 		if (inEvent.sync && inEvent.sync === "success" && !this.syncFail.length) {
 			enyo.application.appPrefs.lastSyncLocal = this.newLastSyncLocal;
 			this.lastSyncLocal = this.newLastSyncLocal;

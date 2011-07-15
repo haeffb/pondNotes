@@ -1,5 +1,6 @@
 /* Copyright 2009-2011 Hewlett-Packard Development Company, L.P. All rights reserved. */
 enyo.depends(
+	"source/noteView.js",
 	"source/pondNotes.js",
 	"source/helpfile.js",
 	"source/preferences.js",
@@ -13,5 +14,6 @@ enyo.depends(
 	"../models/debug.js",
 	"../models/showdown.js",
 	"pondNotes.css",
-	"override.css"
+	"override.css",
+	"$enyo-lib/printdialog/"
 );

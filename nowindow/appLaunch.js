@@ -1,11 +1,13 @@
 enyo.kind({
 	name: "pondAppLaunch",
 	kind: "Component",
+	syncTime: 60, // interval for sync timer
 	
 	components: [	
 		// Application events handlers
 		{kind: "ApplicationEvents", 
 			onUnload: "cleanup",
+			relaunchHandler: "relaunch",
 			onWindowParamsChange: "saveWinParams"},
 			
 		// Alarms service
@@ -52,6 +54,7 @@ enyo.kind({
 		this.getPrefs();
 		this.$.dataSQL.initialize();
 		//this.log(enyo.windows.getWindows());
+		//this.setSyncTimer(this.syncTime);
 
 		
 	},
@@ -65,7 +68,7 @@ enyo.kind({
 			sortorder: "DESC"
 		}
 		var cookie = enyo.getCookie("notedPrefs");
-		this.log(cookie);
+		//this.log(cookie);
 		if (cookie) {
 			enyo.application.appPrefs = enyo.mixin(enyo.application.appPrefs, enyo.json.parse(cookie));
 		}	
@@ -77,14 +80,15 @@ enyo.kind({
 
 // DATABASE Events
 	dbInitialized: function (inSender, inEvent) {
-		this.log("Database has been initialized!", inEvent.database)
+		//this.log("Database has been initialized!", inEvent.database)
 		enyo.application.appDB = this.$.dataSQL;
+		enyo.application.appSync = this.$.simplenoteSync;
 		var launcher = this;
 
 		//var paramString = window.PalmSystem && PalmSystem.launchParams || "{}";
 		//var params = JSON.parse(paramString);
 		var params = enyo.windowParams;
-		this.log(params);
+		//this.log(params);
 		
 		launcher.relaunch(params);
 		
@@ -115,7 +119,7 @@ enyo.kind({
 		
 	},
 	syncUpdateSyncLog: function (inSender, inEvent) {
-		this.log(inEvent);
+		//this.log(inEvent);
 		
 	},
 	syncCheckLogin: function (inSender, inEvent) {
@@ -130,12 +134,12 @@ enyo.kind({
 	
 	startup: function () {
 //		this.$.dataSQL.initialize();
-		this.log("Startup in pondAppLaunch");
-		this.setSyncTimer(60);
+		//this.log("Startup in pondAppLaunch");
+		//this.setSyncTimer(this.syncTime);
 	},
 	
 	relaunch: function (params) {
-		this.log("Relaunch in pondAppLaunch", params);
+		//this.log("Relaunch in pondAppLaunch", params);
 		var notesWindow = enyo.windows.fetchWindow("notes");
 		
 		if (params.action) {
@@ -145,12 +149,13 @@ enyo.kind({
 					break;
 				case "sync":
 					if (notesWindow) {
-						this.openCard("notes", params, false);
+						//this.openCard("notes", params, false);
+						enyo.windows.setWindowParams(notesWindow, params);
 					}
 					else {
 						this.launchSync(params);
 					}
-					this.setSyncTimer(60);
+					//this.setSyncTimer(this.syncTime);
 					//this.setSyncTimer(1);
 					break;
 			}
@@ -160,7 +165,7 @@ enyo.kind({
 		}
 	},
 	launchSync: function (params) {
-		this.log("Launching Background Sync");
+		//this.log("Launching Background Sync");
 		this.$.simplenoteSync.beginSync();
 	},
 	
@@ -168,7 +173,7 @@ enyo.kind({
 		var name, path, basePath, existingWin;
 		
 		name = type;
-		this.log(arguments);
+		//this.log(arguments);
 		basePath = enyo.fetchAppRootPath() + "/";
 		var search = typeof location !== undefined ? location.search : "";
 		if (type === "notes") {
@@ -215,7 +220,7 @@ enyo.kind({
 		//this.inherited(arguments);
 	},
 	setSyncTimer: function(delayInMinutes) {
-		this.log("Delay: ", delayInMinutes);
+		//this.log("Delay: ", delayInMinutes);
 		var dashInfo, d, mo, yr, hrs, mins, secs, myDateString, dStr, bannerParams, date;
 		
 		//For testing purposes ONLY, set delay to 0.5 minutes!
@@ -236,7 +241,7 @@ enyo.kind({
 		secs = d.getUTCSeconds();
 		secs = (secs < 10) ? '0' + secs : secs;
 		myDateString = mo + "/" + date + "/" + yr + " " + hrs + ":" + mins + ":" + secs;
-		this.log("Date String", myDateString);
+		//this.log("Date String", myDateString);
 		
 		//dStr = Mojo.Format.formatDate(d, 'medium');
 		//this.log("Time is", dStr);
@@ -257,10 +262,10 @@ enyo.kind({
 		this.$.alarmService.call();
 	},
 	alarmSuccess: function (inSender, inEvent) {
-		this.log("Alarm Success");
+		//this.log("Alarm Success");
 	},
 	alarmFailure: function (inSender, inEvent) {
-		this.log("Alarm failure", inEvent);
+		//this.log("Alarm failure", inEvent);
 	}
 	
 });

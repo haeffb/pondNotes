@@ -1,4 +1,4 @@
-<img src="images/1pondnoteslogo.png"></img><h2>pondNotes Help</h2>
+<img src="images/pondnoteslogo.png"></img><h2>pondNotes Help</h2>
 
 <p>pondNotes provides a Simplenote client for HP webOS. Take notes on your webOS 
 device and access them anywhere. pondNotes will sync with Simplenote so that you 
@@ -13,14 +13,6 @@ platforms.
 <p>Notes are saved as you type. If you make a mistake, and need to revert to a previous
 version, use the Simplenote web application, which allows you to choose from all versions
 a note.</p>
-
-<p>Use the Edit/View toggle to switch between Edit mode and View mode. While in 
-view mode, notes are displayed with email addresses, phone numbers and website
-addresses as links. Clicking a link will launch the appropriate application.</p>
-
-<p>Use View mode to display markdown formatted notes. </p>
-
-<img src="images/help/editview.png"></img>
 
 <h3>Work with Simplenote</h3>
 <p>Tap the 'Login Here' button to login to your Simplenote account. This will allow 
@@ -44,32 +36,16 @@ your existing tags by tapping on the tag icon on the right side of the tags fiel
 
 <h3>Sort your notes</h3>
 <p>Sort your notes by modified date, created date, or alphabetically. Choose your
-preferred sort options from the Preferences menu.</p>
+preferred sort options from the Preferences scene.</p>
 
 <h3>Add a date or time stamp</h3>
-<p>Add a date/time stamp to the bottom of your note by tapping the 'timestamp' icon. 
-By default, date and time are both added. Tap and hold the 'timestamp' icon to chose 
+<p>Add a date/time stamp to the bottom of your note by tapping the 'clock' icon. 
+By default, date and time are both added. Tap and hold the 'clock' icon to chose 
 date only, time only, or both.</p>
 <img src="images/help/toolbar.png"></img>
 
 <h3>Email your notes</h3>
 <p>Email the note contents by tapping the 'envelope' icon.</p>
-<img src="images/help/toolbar.png"></img>
-
-<h3>Pinned and markdown formatted notes</h3>
-<p>pondNotes supports the pinned feature of Simplenote. Tap the 'i' icon to toggle
-the pinned status of a note. Pinned notes are always displayed at the top of the list
-(unless filtered by the tags or search filter)</p>
-<p>pondNotes also supports markdown formatting. Tap the 'i' icon to toggle whether
-a note uses markdown formatting. See 
-<a href="http://daringfireball.net/projects/markdown/syntax">
-	Daring Fireball</a>
- for more information on markdown.
-</p>
-<img src="images/help/toolbar.png"></img>
-
-<h3>Print your notes</h3>
-<p>Print the current note by tapping the 'print' icon.</p>
 <img src="images/help/toolbar.png"></img>
 
 <h3>Delete notes</h3>

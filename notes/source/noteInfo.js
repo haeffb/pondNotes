@@ -28,7 +28,7 @@ enyo.kind({
 	],	
 	componentsReady: function (inSender, inEvent) {
 		this.inherited(arguments);
-		this.log(this.markdown, this.pinned);
+		//this.log(this.markdown, this.pinned);
 		//this.$.markdownCheckbox.setChecked(this.markdown);
 		//this.$.pinnedCheckbox.setChecked(this.pinned);		
 	},

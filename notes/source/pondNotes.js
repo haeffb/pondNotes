@@ -32,7 +32,8 @@ enyo.kind({
 
 		{name: "header", kind: "PageHeader", components: [
 			{name: "backButton", kind: "Button", caption: $L("Back"), onclick: "closeHelp", showing: false},
-			{kind: "Image", src: "images/1pondnoteslogo64.png", style: "margin: -15px 0px -15px 0px; padding: -20px;" },
+			{kind: "Image", src: "images/1pondnoteslogo64.png", style: "margin: -15px 0px -15px 0px; padding: -20px;",
+				onclick: "launchWebsite" },
 			{kind: "Spacer"},
 			{kind: "ActivityButton", name: "accountButton", caption: '', style: "font-size: 15px;", onclick: "accountClicked",
 				components: [
@@ -90,82 +91,13 @@ enyo.kind({
 					]}
 	
 				]},
-				{name: "notePane", kind: "SlidingView", flex: 1, dismissible: false,
-					dragAnywhere: false,
-					components: [
-						{kind: "Toolbar", align: "center", className: "enyo-toolbar-light", components: [
-							{kind: "ToolInput", flex: 1, align: "center", name: 'tagEdit', alwaysLooksFocused: true,
-								oninput: "saveNote", keypressInputDelay: 1000, autoCapitalize: "lowercase",
-								hint: $L("Tag this note..."),
-								style: "width: 100%;",
-								components: [
-									{kind: "CustomButton", className: "tag-input", onclick: "showTagsMenu", style: "margin: 2px;"},
-								]
-							}, 
-							{kind: "Spacer"},
-							{name: "noteViewEditRadio", kind: "RadioGroup", value: "noteViewScroller",
-								onChange: "toggleViewEdit", components: [
-								{label: $L("Edit"), value: "noteEditScroller"},
-								{label: $L("View"), value: "noteViewScroller"}
-							]}
-						]},
-						{kind: "Pane", flex: 1, flex: 1, name: "noteViewPane", components: [
-								
-							{name: "noteEditScroller", kind: "Scroller", flex: 1, classname: "note-view", 
-									slidingHandler: false, autoHorizontal: false, horizontal: false, autoVertical: true, vertical: true,
-									components: [
-									{name: "noteEdit", kind: "RichText",  value: "",
-										//nodeTag: "pre",
-										oninput: "saveNote", onblur: "noteEditBlur", 
-										//className: "enyo-input",
-										keypressInputDelay: 1000, richContent: true,
-										alwaysLooksFocused: true, //height: "100%",
-										allowHtml: true, //autoLinking: true,
-										 hint: $L("Enter note here...")
-									},
-								]},
-									
-							{name: "noteViewScroller", kind: "Scroller", flex: 1, classname: "note-view", 
-									slidingHandler: false, autoHorizontal: false, horizontal: false, autoVertical: true, vertical: true,
-									components: [
-									{name: "noteView", flex: 1, kind: "HtmlContent", allowHtml: true,
-										className: "note-view",
-										onLinkClick: "noteViewLinkClick",
-									}
-								]},
-						]},
-						{kind: "Toolbar", slidingHandler: false, components: [
-							{kind: "GrabButton"},
-							{kind: "Spacer"},
-							{kind: "HtmlContent", name: "modifiedLabel", //width: "250px",
-								content: "", 
-								style: "color: #bbbbbb; font-size: 15px;",
-							},
-							{kind: "Image", src: "images/1smallpondlogo.png", height: "30px;"},
-							{kind: "Spacer"},
-							{icon: "images/icon-stamp.png", onmousehold: "addStampMenu", onclick: "addStamp", value: "both"},
-							{icon: "images/icon-mail.png", onclick: "sendNote", value: "email"},
-							{icon: "images/icon-info3.png", onclick: "openNoteInfo"},
-							{icon: "images/toolbar-icon-multi-delete.png", onclick: "deleteClicked"}
-						]}
-						
-				]}
+				{name: "noteViewer", kind: "noteView1", onNoteSaved: "noteSaved",
+					onDeleteClicked: "doDeleteClicked"}
+
 			]},
-			{name: "helpPane", kind: "Help"},
+			{name: "helpPane", kind: "pondNotes.Help"},
 			{name: "prefsPane", kind: "Preferences"}
 		]},
-		{
-			kind: "Menu",
-			name: "tagsMenu",
-			components: []		
-		},
-		{
-			name: "stampMenu", kind: "Menu", components: [
-				{caption: "Date", value: "date", onclick: "placeStamp"},
-				{caption: "Time", value: "time", onclick: "placeStamp"},
-				{caption: "Date and Time", value: "both", onclick: "placeStamp"},
-			]
-		},		
 		{
 			kind: "PalmService",
 			service: "palm://com.palm.applicationManager/",
@@ -198,11 +130,6 @@ enyo.kind({
 		    	{kind: "ActivityButton", name: "loginButton", caption: $L("Login"), flex: 1, onclick: "accountLogin", className: "enyo-button-dark"},
 			]},
 		]},
-		
-		// Note Info Dialog
-		{name: "noteInfo", kind: "pondNotes.noteInfo", 
-			onNoteInfoSave: "saveNoteInfo", onNoteInfoCancel: "cancelNoteInfo",
-			onBeforeOpen: "noteInfoBeforeOpen"},
 		
 		// Settings Dialog
 		{kind: "ModalDialog", name: "settings", caption: $L("Preferences"), onBeforeOpen: "settingsBeforeOpen",
@@ -239,7 +166,10 @@ enyo.kind({
 		// Support 
 		{kind: "ModalDialog", caption: $L("About"), name: "support", components: [
 			{kind: "generic.AppInfo", name: "supportInfo", onClose: "supportClose"},	
-		]}
+		]},
+		
+		// Spinner for initial data load
+		{name: "dataSpinner", kind: "Spinner", showing: false}
 		
 	],
 	logKeys: function (inSender, inEvent) {
@@ -252,72 +182,20 @@ enyo.kind({
 				if (enterPressed) this.accountLogin();
 				break;
 			case "searchField":
-				if (enterPressed) this.addNote({note: this.$.searchField.getValue()});
+				if (enterPressed) {
+					this.addNote({
+						note: this.$.searchField.getValue()
+					});
+					this.$.searchField.setValue("");
+					this.searchCancel();
+					
+				}
 				break;
 		}
 	},
-	noteViewLinkClick: function (inSender, inEvent) {
-		this.log(inSender, inEvent);
-		var r = new enyo.PalmService();
-		  r.service = "palm://com.palm.applicationManager/";
-		  r.method = "open";
-		  r.call({target: inEvent});		
-	},
-	
-	toggleViewEdit: function (inSender, inEvent) {
-		this.log (inSender.value);
-		this.log("Edit", this.$.noteEdit.getShowing());
-		//this.$.noteEdit.setShowing(!this.$.noteEdit.getShowing());
-		//this.$.noteView.setShowing(!this.$.noteView.getShowing());
-		this.$.noteViewPane.selectViewByName(inSender.value);
-		this.displayNote(this.selectedNote);
-	},
-	
-	noteInfoBeforeOpen: function (inSender, inEvent) {
-		//this.$.noteInfo.markdownCheckbox.setChecked(enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
-		//this.$.noteInfo.pinnedCheckbox.setChecked(enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
-		var markdown = (enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
-		var pinned = (enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
-		this.$.noteInfo.setChecked(this, {markdown: markdown, pinned: pinned});
-		this.log();
-	},
-	openNoteInfo: function (inSender, inEvent) {
-		this.$.noteInfo.openAtCenter();
-		this.$.noteInfo.setMarkdown(enyo.indexOf("markdown", this.selectedNote.systemtags) == -1 ? false : true);
-		this.$.noteInfo.setPinned(enyo.indexOf("pinned", this.selectedNote.systemtags) == -1 ? false : true);
-	},
-	saveNoteInfo: function (inSender, inEvent) {
-		this.log(inEvent);
-		this.log(this.selectedNote.systemtags);
-		var markdownIndex = enyo.indexOf("markdown", this.selectedNote.systemtags);
-		var pinnedIndex = enyo.indexOf("pinned",this.selectedNote.systemtags);
-		this.log(markdownIndex, pinnedIndex);
-		if (inEvent.markdown) {
-			if (markdownIndex == -1) {
-				this.selectedNote.systemtags.push("markdown");
-			}
-		}
-		else {
-			if (markdownIndex !== -1) {
-				this.selectedNote.systemtags.splice(markdownIndex, 1);
-			}
-		}
-		if (inEvent.pinned) {
-			if (pinnedIndex == -1) {
-				this.selectedNote.systemtags.push("pinned");
-			}
-		}
-		else {
-			if (pinnedIndex !== -1) {
-				this.selectedNote.systemtags.splice(pinnedIndex, 1);
-			}
-		}
-		this.log(this.selectedNote.systemtags);
-		this.saveNote();
-	},
 /* SETUP STUFF * -------------------------------------------------- */
 	handleWinParamsChanged: function (inSender, inEvent) {
-		this.log(enyo.windowParams);
+		//this.log(enyo.windowParams);
 		//this.setLaunchParams(enyo.windowParams);
 		if (enyo.windowParams && enyo.windowParams.action) {
 			switch (enyo.windowParams.action) {
@@ -334,7 +212,7 @@ enyo.kind({
 	},
 /*
 	launchParamsChanged: function (inSender, inEvent) {
-		this.log("Launch Params:",this.launchParams);
+		//this.log("Launch Params:",this.launchParams);
 		switch (this.launchParams.action) {
 			case "addnote":
 				this.addNote({
@@ -345,20 +223,26 @@ enyo.kind({
 	},
 
 */	create: function (inSender) {
+		//this.log(arguments);
 		this.inherited(arguments);
 		this.dataSQL = enyo.application.appDB;
 		//this.log (this.dataSQL);
 		
 		this.getPrefs();
+		//this.$.dataSpinner.show();
 		this.getData();
 		this.tagsArray=[];
 	},
 	ready: function (inSender) {
+		//this.log();
 		this.inherited(arguments);
 		this.$.mainPane.selectViewByName("mySlidingPane");
-		this.$.noteViewPane.selectViewByName("noteViewScroller");
+		//this.syncNow();
+		//this.$.noteViewPane.selectViewByName("noteViewScroller");
+		//this.$.noteViewer.setViewType("noteViewScroller");
 	},
 	getData: function () {
+		//this.log();
 		this.dataSQL.getNotes(null, "display", null, enyo.bind(this, this.updateList));
 		this.dataSQL.getTags("display", enyo.bind(this, this.updateTags));		
 	},
@@ -389,7 +273,7 @@ enyo.kind({
 		
 	},
 	accountMenuSelected: function (inSender, inEvent) {
-		this.log("Account Menu Selected", inEvent, inSender);
+		//this.log("Account Menu Selected", inEvent, inSender);
 
 	},
 	accountSettings: function (inSender, inEvent) {
@@ -459,6 +343,7 @@ enyo.kind({
 			this.savePrefs();
 			this.$.login.close();
 			this.$.accountButton.setCaption(this.appPrefs.email);		
+			this.syncNow();
 	},
 	deleteExistingAccount: function () {
 		this.dataSQL.deleteAllNotes(enyo.bind(this, this.getData));
@@ -491,9 +376,11 @@ enyo.kind({
 	
 /* LIST AND NOTES * ------------------------------------------------------- */
 	addNoteButtonClicked: function (inSender, inEvent) {
+		//this.log();
 		this.addNote({note: ""});
 	},
 	addNote: function (inNote) {
+		//this.log(arguments);
 		var now = new Date().getTime(), note = {};
 		note = {
 			value: now,
@@ -516,40 +403,28 @@ enyo.kind({
 		this.notes.push(note);
 		//this.notes.splice(0,0,note);
 		var rowIndex = (this.appPrefs.sortorder = "DESC" || (this.appPrefs.sort == "content" && this.appPrefs.sortorder == "ASC")) ? 0 : this.notes.length-1; 
-		this.listClicked(null, { 
-			rowIndex: 0
-		});
+		//this.listClicked(null, { 
+		//	rowIndex: 0
+		//});
+		this.$.noteViewer.setNote(note);
+		this.$.noteViewer.setViewType("noteEditScroller");
+		//this.$.list.select(inEvent.rowIndex);
+		this.selectedNote = note;
+		//this.log(this.selectedNote);
+		//this.getData();
+		this.dataSQL.getNotes(null, "display", null, enyo.bind(this, this.updateList));
+		//this.selectedRowIndex = inEvent.rowIndex;
 		//this.$.noteEdit.forceFocus();
-		this.$.searchField.setValue("");
-		this.searchCancel();
+		this.$.noteCount.setContent(this.notes.length || "0");
 
 	},
-	saveNote: function () {
-		var note = this.selectedNote;
-		note.content = this.$.noteEdit.getValue()
-		
-		this.log(this.$.noteEdit.getText().toString());
-		this.log(this.$.noteEdit.getHtml());
-		
-		// hack to overcome bug in RichText (note: set richContent: false if fixed!
-		// also see this.displayNote() and this.placeStamp();
-		this.log(note.content);
-		note.content = note.content.replace(/<\/div>/g, "");
-		note.content = note.content.replace(/<div><br>/g, "\n")
-		note.content = note.content.replace(/<br>/g, "\n");
-		note.content = note.content.replace(/<div>/g, "\n");
-		note.content = note.content.replace(/&nbsp;/g, " ");
-		this.log(note.content);
-		//
-		
-		note.tags = this.$.tagEdit.getValue().length ? this.$.tagEdit.getValue().split(" "): [];
-		note.modifydate = new Date().getTime();
-		this.log("Save Note: ", note);
-		this.dataSQL.updateNote(note, "plain", null);
-		this.notes[this.selectedRowIndex] = note;
+	noteSaved: function (inSender, inNote) {
+		//this.log (inSender, inNote);
+		this.notes[this.selectedRowIndex] = inNote;
 		this.$.list.refresh();
-		this.dataSQL.getTags("display", enyo.bind(this, this.updateTags));		
+		this.dataSQL.getTags("display", enyo.bind(this, this.updateTags));	
 	},
+
 	searchNotes: function (inSender, inEvent) {
 		//this.log(inEvent);
 		//this.log(inSender.value);
@@ -561,7 +436,7 @@ enyo.kind({
 					"n.syncnum, n.version, n.minversion," + 
 			" CASE WHEN n.systemtags LIKE '%pinned%' THEN 1 ELSE 0 END as pinned" +
 			" FROM notes n" +
-			" WHERE (content LIKE '%" + inSender.value + "%' OR tags like '%" + inSender.value + "%')" +
+			" WHERE (content LIKE '%" + this.escapeSQLString(inSender.value) + "%' OR tags like '%" + this.escapeSQLString(inSender.value) + "%')" +
 			" AND deleted = 0" + 
 			" ORDER BY pinned DESC, "  + 
 			this.appPrefs.sort + " " + this.appPrefs.sortorder + ";";
@@ -569,6 +444,10 @@ enyo.kind({
 		}
 		this.dataSQL.getNotes(sqlString, null, null, enyo.bind(this, this.updateList));
 	},
+	escapeSQLString: function (inString) {
+		return inString.replace(/\\/g, "\\\\").replace(/(%|_)/g, "\\$1")
+	},
+
 	searchCancel: function (inSender, inEvent) {
 		//this.dataSQL.getNotes(null, null, null, enyo.bind(this, this.updateList));
 		this.getData();
@@ -587,17 +466,22 @@ enyo.kind({
 		}
 		this.notes.splice(inEvent, 1);
 		if (this.selectedRowIndex === inEvent) {
-			this.selectedNote = this.notes[this.selectedRowIndex];
-			this.listClicked(null, {rowIndex: inEvent});
+			//this.selectedNote = this.notes[this.selectedRowIndex];
+			//this.listClicked(null, {rowIndex: inEvent});
 		}
 		if (this.selectedRowIndex > inEvent) {
 			//this.selectedRowIndex -= 1; 
-			this.selectedRowIndex = (this.selectedRowIndex =  0) ? 0 : this.selectedRowIndex - 1; 
+			this.selectedRowIndex = (this.selectedRowIndex ===  0) ? 0 : this.selectedRowIndex - 1;
+			//this.selectedNote = this.notes[this.selectedRowIndex]; 
 			this.$.list.select(this.selectedRowIndex);
 		}
-		this.displayNote(this.notes[this.selectedRowIndex]);
+		//this.displayNote(this.notes[this.selectedRowIndex]);
+		this.selectedNote = this.notes[this.selectedRowIndex];
+		//this.log(this.selectedRowIndex, this.selectedNote);
+		this.$.noteViewer.setNote(this.notes[this.selectedRowIndex]);
 		this.$.list.refresh();
 		this.dataSQL.getTags("display", enyo.bind(this, this.updateTags));		
+		this.$.noteCount.setContent(this.notes.length || "0");
 		
 	},
 	deleteClicked: function (inSender, inEvent) {
@@ -618,12 +502,17 @@ enyo.kind({
 			this.dataSQL.updateNote(this.selectedNote);			
 		}
 		this.notes.splice([this.selectedRowIndex], 1);
-		this.selectedRowIndex = (this.selectedRowIndex >= this.notes.length  && this.notes.lengt > 0) ? this.notes.length-1 : this.selectedRowIndex;
+		this.selectedRowIndex = (this.selectedRowIndex >= this.notes.length  && this.notes.length > 0) ? this.notes.length-1 : this.selectedRowIndex;
 		
 		//this.log("New Selected Row", this.selectedRowIndex);
-		this.displayNote(this.notes[this.selectedRowIndex]);
-		this.listClicked(null, {rowIndex: this.selectedRowIndex});
+		//this.displayNote(this.notes[this.selectedRowIndex]);
+		this.selectedNote = this.notes[this.selectedNoteIndex];
+		this.$.noteViewer.setNote(this.notes[this.selectedRowIndex]);
+		//this.listClicked(null, {rowIndex: this.selectedRowIndex});
+		this.$.list.select(this.selectedRowIndex);
+		this.$.list.refresh();
 		this.dataSQL.getTags("display", enyo.bind(this, this.updateTags));		
+		this.$.noteCount.setContent(this.notes.length || "0");
 	},
 	setupRow: function(inSender, inIndex) {
 		if (this.notes[inIndex]) {
@@ -683,7 +572,8 @@ enyo.kind({
 				//FIXME modified 12 Jul 2011 - not tested
 				this.selectedRowIndex = this.findSelectedNote(); //this.notes[0];
 				this.selectedNote = this.notes[this.selectedRowIndex];
-				this.displayNote(this.selectedNote);
+				this.$.noteViewer.setNote(this.selectedNote);
+				//this.displayNote(this.selectedNote);
 				this.$.list.select(this.selectedRowIndex);
 			}
 			else {
@@ -691,17 +581,24 @@ enyo.kind({
 				//this.addNote();			
 			}
 			
-			this.$.modifiedLabel.addStyles('pointer-events: none;')
+			//this.$.modifiedLabel.addStyles('pointer-events: none;')
 		}
+		//this.$.dataSpinner.hide();
 		this.$.noteCount.setContent(this.notes.length || "0");
 	},
 	findSelectedNote: function () {
 		var i;
-		for (i = 0; i < this.notes.length; i++) {
-			if (this.selectedNote && this.notes[i].value === this.selectedNote.value) {
-				return i;
+		//this.log(this.selectedNote);
+		if (this.selectedNote && this.selectedNote.value) {
+			for (i = 0; i < this.notes.length; i++) {
+				//this.log("Note", i, this.notes[i].value, this.selectedNote.value);
+				if (parseInt(this.notes[i].value, 10) == parseInt(this.selectedNote.value, 10)) {
+					//this.log("Found note", i, this.notes[i]);
+					return i;
+				}
 			}
 		}
+		//this.log("Didn't find note");
 		return 0;
 	},
 	setModifyString: function (inDate) {
@@ -730,8 +627,9 @@ enyo.kind({
 		}
 
 */		this.$.tagSelector.setItems(tagsArray);
-		this.log(this.$.tagSelector.getItems());
-		this.tagsArray = tagsArray.slice(1);
+		//this.log(this.$.tagSelector.getItems());
+		//this.tagsArray = tagsArray.slice(1);
+		this.$.noteViewer.setTagsArray(tagsArray.slice(1));
 		//this.log(tagsArray, this.tagsArray);
 	},
 	tagChanged: function (inSender, inValue, inOldValue) {
@@ -760,78 +658,11 @@ enyo.kind({
 		return 0;
 	
 	},
-	displayNote: function (note) {
-		var i, lines, content = "";
-		
-		if (note) {
-		
-			// hack to overcome bug in RichText control
-			// also see this.saveNote() and this.placeStamp();
-
-			lines = note.content.split("\n");
-			for (i = 0; i < lines.length; i++) {
-				lines[i] = (lines[i].length > 0) ? lines[i] : "<br>";
-				lines[i] = lines[i].replace(/ /g, "&nbsp;");
-				if (i > 0) 
-					lines[i] = "<div>" + lines[i] + "</div>";
-				content += lines[i];
-			}
-
-			//this.log(content);
-			//content = note.content;
-			
-			this.$.noteEdit.setValue(content.replace(/\n/g, "<br>"));
-			this.$.tagEdit.setValue(note.tags.join(" "))
-			//this.$.modifiedLabel.setContent($L("Modified:") + " " + this.setModifyString(note.modifydate));
-			this.$.noteEdit.setDisabled(false);
-			this.$.tagEdit.setDisabled(false);
-			//this.$.noteEdit.setHint($L("Enter note here..."))
-			this.$.noteCount.setContent(this.notes.length || "0");
-			//this.log("List selection!", this.$.list.getSelection());
-			//this.$.noteView.setContent(enyo.string.runTextIndexer(content));
-			var viewContent = "";
-			if (enyo.indexOf("markdown", note.systemtags) !== -1) {
-				var converter = new Showdown.converter();
-				viewContent = converter.makeHtml(note.content);
-			}
-			else {
-				lines = note.content.split("\n");
-				//this.log (note);
-				//this.log(lines);
-				for (i = 0; i < lines.length; i++) {
-					lines[i] = (lines[i].length > 0) ? lines[i] : "<br>";
-					lines[i] = lines[i].replace(/ /g, "&nbsp;");
-					if (i > 0) {
-						lines[i] = "<div>" + lines[i] + "</div>";
-					}
-					lines[i] = enyo.string.runTextIndexer(lines[i]);
-					viewContent += lines[i];
-				}
-			}
-			this.log(viewContent);
-			this.$.noteView.setContent(viewContent);
-			
-		}
-		else {
-			this.disableNote();
-		}
-		
-		
-	},
-	disableNote: function () {
-			this.$.noteEdit.setDisabled(true);
-			this.$.tagEdit.setDisabled(true);
-			this.$.tagEdit.setValue("");
-			this.$.noteEdit.setValue("");
-			this.$.noteView.setValue("");
-			this.$.noteEdit.setHint($L("Tap plus icon to enter a new note..."))
-			//this.$.modifiedLabel.setContent($L("Modified:"));
-			this.$.noteCount.setContent("0");
-	},
 	listClicked: function (inSender, inEvent) {
 		//this.log("List Clicked", inEvent);
 		if (this.notes.length) {
-			this.displayNote(this.notes[inEvent.rowIndex]);
+			//this.displayNote(this.notes[inEvent.rowIndex]);
+			this.$.noteViewer.setNote(this.notes[inEvent.rowIndex]);
 			this.$.list.select(inEvent.rowIndex);
 			this.selectedNote = this.notes[inEvent.rowIndex];
 			this.selectedRowIndex = inEvent.rowIndex;
@@ -841,6 +672,7 @@ enyo.kind({
 		else {
 			this.disableNote();
 		}
+		this.$.noteViewer.setViewType("noteViewScroller");
 		this.$.list.refresh();
 	},
 	showTagsMenu: function (inSender, inEvent) {
@@ -919,6 +751,7 @@ enyo.kind({
 	
 	/* HELP PANE * -------------------------------------------------- */
 	showHelp: function () {
+		this.log();
 		this.$.backButton.show();
 		this.$.mainPane.selectViewByName("helpPane");
 	},
@@ -928,10 +761,10 @@ enyo.kind({
 	},
 
 	showPrefs: function (inSender) {
-		this.log();
+		//this.log();
 		this.$.backButton.show();
 		this.$.mainPane.selectViewByName("prefsPane");
-		this.log();
+		//this.log();
 	},
 	closePrefs: function (inSender) {
 		this.$.backButton.hide();
@@ -942,12 +775,14 @@ enyo.kind({
 	syncNow: function (inSender, inEvent) {
 		//this.log ("Sync Now from account menu");
 		//this.$.accountButton.setActive(true);
-		this.$.simplenoteSync.beginSync();
-		this.$.syncProgressBar.show();
-		this.$.syncProgressBar.setPosition(0);
-		this.$.syncButton.hide();
-		this.$.syncSpinner.show();
-		this.$.syncContent.setContent("Sync Log (tap to close) <br />");
+		if (this.appPrefs.email && this.appPrefs.password) {
+			this.$.simplenoteSync.beginSync();
+			this.$.syncProgressBar.show();
+			this.$.syncProgressBar.setPosition(0);
+			this.$.syncButton.hide();
+			this.$.syncSpinner.show();
+			this.$.syncContent.setContent("Sync Log (tap to close) <br />");
+		}
 		//this.$.syncLog.open();
 		//this.startSyncAnimation = enyo.bind(this, this.startSyncAnimation());
 		//this.startSyncAnimation();
@@ -1003,119 +838,9 @@ enyo.kind({
 		this.$.syncLog.open();
 	},
 	
-/* SEND NOTE *--------------------------------------------------------- */	
-	sendNote: function (inSender, inEvent) {
-		//this.log("Sending Note");	
-		//inSender.value = "email-cmd";
-		switch (inSender.value) {
-			case 'email':
-				this.sendByEmail(this.selectedNote);
-				break;
-			case 'sms':
-				this.sendBySMS(this.selectedNote);
-				break;
-		}
-	},
-	
-	sendByEmail: function (note) {
-		var text =  note.content; 
-		text = enyo.string.runTextIndexer(note.content.replace(/\n/g, "<br />"));
-	
-		 this.$.palmService.call({
-			id: 'com.palm.app.email',
-				params: {
-					summary: $L("Email from pondNotes"),
-					text: text
-				}
-		});
-	},
-	
-	sendBySMS: function (note) {
-		var text = note.content;
-		this.$.palmService.call({
-			id: 'com.palm.app.messaging',
-			params: {
-				//composeAddress: '4085555555',
-				messageText: text
-			}
-		});
-	},
-
-/* DATE TIME STAMP *--------------------------------------------------------- */	
-	addStampMenu: function (inSender, inEvent) {
-		//this.log("Stamp Menu");
-		this.showStampMenu = true;
-		this.$.stampMenu.openAtEvent(inEvent);
-	},
-
-	addStamp: function (inSender, inEvent) {
-		if (this.showStampMenu) {
-			//this.log("Showing Stamp Menu");
-			this.showStampMenu = false;
-		}
-		else {
-			this.placeStamp(inSender, inEvent);
-		}
-	},
-	noteEditBlur: function (inSender, inEvent) {
-		this.log(inSender, inEvent);
-			//var pos = this.$.noteEdit.getSelection();
-			//this.log("Get position", pos);
-	},
-	placeStamp: function (inSender,inEvent) {
-		//this.log(inSender, inEvent);
-			var textField, pos, start, end, stamp, note;
-			type = inSender.value ? inSender.value : 'both';
-			textField = this.$.noteEdit;
-			note = (textField.getValue()) ? textField.getValue() : "";
-			pos = this.$.noteEdit.getSelection();
-			this.log("Get position", pos);
-			//Mojo.Log.info("Position: %j", pos);
-			switch (type) {
-				case 'time':
-					stamp = new enyo.g11n.DateFmt({
-						time: "short"
-					}).format(new Date());
-					break;
-				case 'date':
-					stamp = new enyo.g11n.DateFmt({
-						date: "medium"
-					}).format(new Date());
-					break;
-				case 'both':
-					stamp = new enyo.g11n.DateFmt({
-						date: "medium",
-						time: "short"
-					}).format(new Date());
-					break;
-			}
-			//this.log("Stamp", stamp);
-			
-			// hack to overcome bug in RichText control
-			// also see this.saveNote() and this.displayNote();
-			//stamp = "\n" + stamp;
-			stamp = "<br />" + stamp;
-			//Mojo.Log.info ("note length", note.length);
-			pos = {
-				start: note.length,
-				end: note.length
-			}
-			start = "";
-			end = "";
-			if (note) {
-				start = note.substring(0, pos.start);
-				end = note.substring(pos.end, note.length);
-			}
-			//Mojo.Log.info("Note:", start, "+",  stamp, "+", end);
-			this.$.noteEdit.setValue(start + " " + stamp + " " + end);
-			if (pos) {
-			//textField.mojo.setCursorPosition(pos.selectionStart + stamp.length, pos.selectionStart + stamp.length);
-			}
-			
-			// need to save note!		
-			this.saveNote();
+	// Launch website
+	launchWebsite: function (inSender, inEvent) {
+		this.$.palmService.call({target: "http://smallpondapps.com/pondnotes"});
 	}
-
-	
 	
 });

@@ -87,7 +87,14 @@
 .note-view {
 	background-color: white;
 	padding: 12px 10px;
+	-webkit-nbsp-mode: space;
+	-webkit-line-break: after-white-space;
 	font-size: 0.9rem;
+	width: 100%;
+	
+}
+.note-vew-scroller {
+	background-color: white;
 }
 .note-view h1 {
 	font-size: 25px;

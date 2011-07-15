@@ -1,5 +1,5 @@
 enyo.kind({
-	name: "Help",
+	name: "pondNotes.Help",
 	kind: "VFlexBox",
 	components: [
 		{name: "loadHtml", kind: "WebService", onSuccess: "gotContent"},
@@ -10,12 +10,14 @@ enyo.kind({
 	],
 	
 	ready: function (inSender) {
+		this.log();
 		this.inherited(arguments);
 		var file = enyo.fetchAppRootPath() + $L("/resources/en/") + "helpcontent.html";
 		this.$.loadHtml.setUrl(file);
 		this.$.loadHtml.call()
 	},
 	gotContent: function (inSender, inEvent) {
+		this.log();
 		//this.log(inEvent);
 		this.$.helpContents.setContent(inEvent);
 		this.render();

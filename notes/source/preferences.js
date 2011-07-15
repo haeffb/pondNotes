@@ -16,6 +16,6 @@ enyo.kind({
 		}
 	],
 	create: function (inSender) {
-		this.log();
+		//this.log();
 	}
 })		

@@ -190,7 +190,7 @@ enyo.kind ({
 		" WHERE deleted = 0" + 
 		" ORDER BY pinned DESC, "  + appPrefs.sort + " " + appPrefs.sortorder + ";";
 		inString = inString ? inString : defaultString;
-		this.log("Getting notes with string:", inString);
+		//this.log("Getting notes with string:", inString);
 		this.db.readTransaction(
 			enyo.bind(this, (function (transaction) {
 				transaction.executeSql(inString, [],
